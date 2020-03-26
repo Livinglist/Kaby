@@ -28,10 +28,12 @@ class TaskBloc {
     _tasksFetcher.sink.add(_allTasks);
   }
 
-  void deleteTask(Task task){
+  void deleteTask(Task task) {
     _allTasks.remove(task);
     _tasksFetcher.sink.add(_allTasks);
   }
+
+  void updateTask(Task task) {}
 
   void dispose() {
     _tasksFetcher.close();

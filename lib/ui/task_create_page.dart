@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:kanban/bloc/task_bloc.dart';
+import 'package:kanban/bloc/project_bloc.dart';
 
 import 'package:kanban/models/task.dart';
 import 'home_page.dart';
@@ -32,7 +32,7 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
 
                 task = Task.create(title: title, description: description);
 
-                taskBloc.addTask(task);
+                projectBloc.addTask(task);
 
                 Navigator.pop(context);
               }
@@ -45,20 +45,26 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
-              TextFormField(
-                controller: titleController,
-                decoration: InputDecoration(hintText: "Title"),
-                validator: (String value) {
-                  if (value.trim().isEmpty) {
-                    return "Title cannot be empty.";
-                  }
-                  return null;
-                },
+              Padding(
+                padding: EdgeInsets.all(12),
+                child: TextFormField(
+                  controller: titleController,
+                  decoration: InputDecoration(hintText: "Title", labelText: "Title"),
+                  validator: (String value) {
+                    if (value.trim().isEmpty) {
+                      return "Title cannot be empty.";
+                    }
+                    return null;
+                  },
+                ),
               ),
-              TextFormField(
-                controller: descriptionController,
-                decoration: InputDecoration(hintText: "Description"),
-              ),
+              Padding(
+                padding: EdgeInsets.all(12),
+                child: TextFormField(
+                  controller: descriptionController,
+                  decoration: InputDecoration(hintText: "Description", labelText: "Description"),
+                ),
+              )
             ],
           ),
         ),

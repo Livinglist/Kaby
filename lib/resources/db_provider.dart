@@ -7,9 +7,9 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
-import 'package:kanban/models/task.dart';
+import 'package:kanban/models/project.dart';
 
-export 'package:kanban/models/task.dart';
+export 'package:kanban/models/project.dart';
 
 class DBProvider {
   static final DBProvider db = DBProvider._();
@@ -58,59 +58,40 @@ class DBProvider {
     }
   }
 
-  Future<void> updateTask(Task task) async {
+  Future<void> updateProject(Project project) async {
     final db = await database;
-    var res = await db.update("Tasks", task.toMap(), where: "id = ?", whereArgs: [task.id]);
+    var res = await db.update("Projects", project.toMap(), where: "id = ?", whereArgs: [project.id]);
     return res;
   }
 
-  Future<void> deleteTask(Task task) async {
+  Future<void> deleteProject(Project task) async {
     final db = await database;
-    var res = await db.delete("Tasks", where: "id = ?", whereArgs: [task.id]);
+    var res = await db.delete("Projects", where: "id = ?", whereArgs: [task.id]);
     return res;
   }
 
-//
-//  deleteAllRoutines() async {
-//    final db = await database;
-//    var res = await db.delete("Routines");
-//    return res;
-//  }
-//
-  Future<void> addTask(Task task) async {
+  Future<void> addProject(Project project) async {
     final db = await database;
 
-    var table = await db.rawQuery('SELECT MAX(Id)+1 as Id FROM Tasks');
-    int id = table.first['Id'];
-    var map = task.toMap();
-    return await db.insert('Tasks', task.toMap());
-//    await db.rawInsert(
-//        'INSERT Into Routines (Id, RoutineName, MainPart, Parts, LastCompletedDate, CreatedDate, Count, RoutineHistory, Weekdays) VALUES (?,?,?,?,?,?,?,?,?)',
-//        [
-//          id,
-//
-//          ///changed from [map['id']] to [id]
-//          map['RoutineName'],
-//          map['MainPart'],
-//          map['Parts'],
-//          map['LastCompletedDate'],
-//          map['CreatedDate'],
-//          map['Count'],
-//          map['RoutineHistory'],
-//          map['Weekdays'],
-//        ]);
+    var table = await db.rawQuery('SELECT MAX(id)+1 as id FROM Projects');
+    int id = table.first['id'];
+    project.id = id ?? 0;
+    var map = project.toMap();
+
+    //return db.insert("Projects", {"id": map[idKey], "uuid": map[uidKey], "tasks": map[projectTasksKey], "name": map[projectNameKey]});
+    return db.insert("Projects", map);
   }
 
-  Future<List<Task>> getAllTasks() async {
+  Future<List<Project>> getAllProjects() async {
     final db = await database;
     List<Map> res;
-    res = await db.query('Tasks');
+    res = await db.query('Projects');
 
-    print("The length of tasks: ${res.length}");
+    print("The length of projects: ${res.length}");
 
     return res.isNotEmpty
         ? res.map((r) {
-            return Task.fromMap(r);
+            return Project.fromMap(r);
           }).toList()
         : [];
   }
@@ -118,8 +99,8 @@ class DBProvider {
   Future<int> getNextId() async {
     final db = await database;
 
-    var table = await db.rawQuery('SELECT MAX(Id)+1 as Id FROM Tasks');
-    int id = table.first['Id'];
+    var table = await db.rawQuery('SELECT MAX(id)+1 as id FROM Projects');
+    int id = table.first['id'];
 
     return id;
   }

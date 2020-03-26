@@ -1,11 +1,17 @@
-import 'package:flutter/material.dart';
+import 'dart:math';
+
+import 'package:flutter/material.dart' hide Scaffold, ScaffoldState;
+import 'package:flutter/cupertino.dart';
+import 'package:kanban/models/project.dart';
 
 import 'package:kanban/models/task.dart';
 import 'components/task_tile.dart';
 import 'package:kanban/utils/list_extension.dart';
 import 'components/custom_dismissable.dart' as Custom;
+import 'components/custom_drawer.dart' as CustomDrawer;
 import 'task_create_page.dart';
-import 'package:kanban/bloc/task_bloc.dart';
+import 'package:kanban/bloc/project_bloc.dart';
+import 'components/custom_scaffold.dart';
 
 class HomePageWrapper extends StatefulWidget {
   @override
@@ -15,28 +21,25 @@ class HomePageWrapper extends StatefulWidget {
 class _HomePageWrapperState extends State<HomePageWrapper> {
   @override
   void initState() {
-    taskBloc.fetchAllTasks();
+    projectBloc.fetchAllProjects();
 
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    GlobalKey globalKey;
     return StreamBuilder(
-      stream: taskBloc.allTasks,
-      builder: (_, AsyncSnapshot<List<Task>> snapshot) {
+      stream: projectBloc.currentProject,
+      builder: (_, AsyncSnapshot<Project> snapshot) {
         if (snapshot.hasData) {
-          List<Task> task = snapshot.data;
-//          Map<Task, GlobalKey<Custom.CustomDismissibleState>> dismissibleKeys =
-//              Map.fromEntries(task.map((task) => MapEntry(task, GlobalKey<Custom.CustomDismissibleState>(debugLabel: task.title))));
+          List<Task> task = snapshot.data.tasks;
 
           return HomePage(
-            key: globalKey,
-            allTasks: task,
-            //dismissibleKeys: dismissibleKeys,
+            key: UniqueKey(),
+            project: snapshot.data,
           );
         } else {
+          print("no data");
           return Container();
         }
       },
@@ -44,25 +47,33 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
   }
 }
 
-enum InteractingStatus{ delete, move}
+enum InteractingStatus { delete, move }
 
 class HomePage extends StatefulWidget {
+  final Project project;
   final List<Task> allTasks;
 
-  HomePage({this.allTasks, Key key}) : super(key: key);
+  HomePage({this.project, Key key})
+      : allTasks = project.tasks,
+        super(key: key);
 
   @override
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  final scaffoldKey = GlobalKey<ScaffoldState>();
+  final drawerKey = GlobalKey<Custom.CustomDismissibleState>();
+  final nameEditingController = TextEditingController();
+  int projectId = -1;
   Map<Task, GlobalKey<Custom.CustomDismissibleState>> dismissibleKeys;
 
   InteractingStatus interactingStatus = InteractingStatus.move;
 
-  double todoHeight, doingHeight, doneHeight;
+  double initialTodoHeight, todoHeight, initialDoingHeight, doingHeight, initialDoneHeight, doneHeight;
 
   AnimationController animationController;
+  AnimationController iconAnimationController;
 
   ///The task that is being interacted with.
   Task currentTask;
@@ -76,7 +87,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     print("initState");
 
+    iconAnimationController = AnimationController(vsync: this, lowerBound: 0.0, upperBound: 1.0, duration: Duration(microseconds: 300));
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      scaffoldKey.currentState.drawerKey.currentState.controller.addListener(() {
+        iconAnimationController.value = scaffoldKey.currentState.drawerKey.currentState.controller.value;
+      });
       print("=========add post frame callback========");
       this.task = widget.allTasks;
       todoTask = task.where((e) => e.status == TaskStatus.todo).toList();
@@ -85,16 +101,18 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
       for (var task in dismissibleKeys.keys) {
         var dismissibleKey = dismissibleKeys[task];
-        print("map: $task");
+
         dismissibleKey.currentState.moveController.addListener(() {
           setState(() {
             //Delete task.
             if (dismissibleKey.currentState.dismissDirection == Custom.DismissDirection.endToStart) {
-              currentTask = null;
+              currentTask = task;
+              interactingStatus = InteractingStatus.delete;
             }
             //Moving task to next section.
             else if (dismissibleKey.currentState.dismissDirection == Custom.DismissDirection.startToEnd) {
               currentTask = task;
+              interactingStatus = InteractingStatus.move;
             }
           });
 
@@ -139,6 +157,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     doingHeight = doingPortion * height;
     doneHeight = donePortion * height;
 
+    print(todoHeight);
+    print(doingHeight);
+    print(doneHeight);
+
     unit = height / allTasks.length;
   }
 
@@ -156,34 +178,65 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     doingTask = task.where((e) => e.status == TaskStatus.doing).toList();
     doneTask = task.where((e) => e.status == TaskStatus.done).toList();
 
+    Color appBarColor;
+    Color appBarColorDeep;
+    String appBarTitle;
+    var temp = [...todoTask, ...doingTask, ...doneTask];
+    if (temp.isNotEmpty) {
+      switch (temp[0].status) {
+        case TaskStatus.todo:
+          appBarColor = Colors.lightBlue;
+          appBarColorDeep = Colors.blueAccent;
+          appBarTitle = "Todo";
+          break;
+        case TaskStatus.doing:
+          appBarColor = Colors.redAccent;
+          appBarColorDeep = Colors.red;
+          appBarTitle = "Doing";
+          break;
+        case TaskStatus.done:
+          appBarColor = Colors.blueAccent;
+          appBarColorDeep = Colors.blue[800];
+          appBarTitle = "Done";
+          break;
+        default:
+      }
+    } else {
+      appBarColor = Colors.blueAccent;
+      appBarColorDeep = Colors.blue[800];
+      appBarTitle = "Todo";
+    }
+
     //Newly added Task
-    if (dismissibleKeys.containsKey(task.last) == false) {
+    if (task.isNotEmpty && dismissibleKeys.containsKey(task.last) == false) {
       dismissibleKeys[task.last] = GlobalKey<Custom.CustomDismissibleState>();
       computeHeight();
     }
 
     print("===============build===============");
-    print(task);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       print("=========add post frame callback========");
       this.task = widget.allTasks;
+
       todoTask = task.where((e) => e.status == TaskStatus.todo).toList();
       doingTask = task.where((e) => e.status == TaskStatus.doing).toList();
       doneTask = task.where((e) => e.status == TaskStatus.done).toList();
 
       for (var task in dismissibleKeys.keys) {
         var dismissibleKey = dismissibleKeys[task];
-        print("map: $task");
+
         dismissibleKey.currentState.moveController.addListener(() {
           setState(() {
             //Delete task.
             if (dismissibleKey.currentState.dismissDirection == Custom.DismissDirection.endToStart) {
-              currentTask = null;
+              currentTask = task;
+              interactingStatus = InteractingStatus.delete;
             }
             //Moving task to next section.
             else if (dismissibleKey.currentState.dismissDirection == Custom.DismissDirection.startToEnd) {
               currentTask = task;
+              interactingStatus = InteractingStatus.move;
             }
           });
 
@@ -197,264 +250,320 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         });
       }
     });
-
     return Scaffold(
-        appBar: AppBar(
-          elevation: 8,
-          actions: <Widget>[
-            IconButton(
-              icon: Icon(Icons.add),
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => TaskCreatePage()));
-                this.deactivate();
+      appBar: AppBar(
+        backgroundColor: appBarColor,
+        title: Text(task.isEmpty ? "Empty" : appBarTitle),
+        elevation: 8,
+        leading: IconButton(
+          icon: AnimatedIcon(progress: iconAnimationController.drive(Tween<double>(begin: 0.0, end: 1.0)), icon: AnimatedIcons.menu_arrow),
+          onPressed: () {
+            if (scaffoldKey.currentState.isDrawerOpen == false) {
+              scaffoldKey.currentState.openDrawer();
+            } else {
+              scaffoldKey.currentState.closeDrawer();
+            }
+          },
+        ),
+        actions: <Widget>[
+          if (task.isNotEmpty)
+            AnimatedBuilder(
+              animation: iconAnimationController,
+              builder: (_, __) {
+                return Opacity(
+                  opacity: iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value,
+                  child: IconButton(
+                    icon: Icon(Icons.add),
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => TaskCreatePage()));
+                      this.deactivate();
+                    },
+                  ),
+                );
               },
             )
-          ],
-        ),
-        body: AnimatedBuilder(
-          animation: animationController,
-          builder: (_, __) {
-            double todoHeight = this.todoHeight, doingHeight = this.doingHeight, doneHeight = this.doneHeight;
-            
-            if (currentTask != null) {
-              switch (currentTask.status) {
-                case TaskStatus.todo:
-                  todoHeight = todoHeight + (animationController.value + 1) * -unit;
-                  doingHeight = doingHeight + (animationController.value + 1) * unit;
-                  break;
-                case TaskStatus.doing:
-                  doingHeight = doingHeight + (animationController.value + 1) * -unit;
-                  doneHeight = doneHeight + (animationController.value + 1) * unit;
-                  break;
-                default:
-                  break;
-              }
-            } else {
-              double deletedUnit = height / (task.length - 1);
-              todoHeight = todoHeight + (animationController.value + 1) * deletedUnit;
-              doingHeight = doingHeight + (animationController.value + 1) * deletedUnit;
-              doneHeight = doneHeight + (animationController.value + 1) * deletedUnit;
-            }
+        ],
+      ),
+      body: Scaffold(
+          key: scaffoldKey,
+          drawer: Drawer(
+              child: SingleChildScrollView(
+                  child: StreamBuilder(
+            stream: projectBloc.allProjects,
+            builder: (_, AsyncSnapshot<List<Project>> snapshot) {
+              return Flex(
+                direction: Axis.vertical,
+                children: <Widget>[
+                  ListTile(
+                    title: Text("My Kanban"),
+                    onTap: () {
+                      projectId = -1;
+                      projectBloc.getKanban();
+                      Navigator.pop(context);
+                    },
+                  ),
+                  Container(child: ListTile(title: Text("Projects")), color: appBarColor),
+                  if (snapshot.hasData)
+                    for (var p in snapshot.data)
+                      Container(
+                        color: widget.project.id == p.id ? appBarColorDeep : Colors.white,
+                        child: ListTile(
+                          title: Text(p.name),
+                          onTap: () {
+                            projectId = p.id;
+                            projectBloc.getProjectById(p.uid);
+                            Navigator.pop(context);
+                          },
+                          onLongPress: () {
+                            showCupertinoModalPopup<bool>(
+                                context: context,
+                                builder: (BuildContext context) => CupertinoActionSheet(
+                                  message: Text("Are you sure?"),
+                                  cancelButton: CupertinoActionSheetAction(
+                                    isDefaultAction: true,
+                                    child: Text('Cancel'),
+                                    onPressed: () {
+                                      Navigator.pop(context, false);
+                                    },
+                                  ),
+                                  actions: <Widget>[
+                                    CupertinoActionSheetAction(
+                                      isDestructiveAction: true,
+                                      child: Text('Remove ${p.name}'),
+                                      onPressed: () {
+                                        Navigator.pop(context, true);
+                                      },
+                                    ),
+                                  ],
+                                )).then((value) {
+                              if (value) {
+                                projectBloc.deleteProject(p);
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                  Container(
+                    color: appBarColor,
+                    child: ListTile(
+                        title: Icon(Icons.add),
+                        onTap: () {
+                          showDialog<bool>(
+                            context: context,
+                            builder: (context) {
+                              return CupertinoAlertDialog(
+                                title: Text('Name Your Project'),
+                                content: Flex(
+                                  direction: Axis.vertical,
+                                  children: <Widget>[
+                                    CupertinoTextField(
+                                      controller: nameEditingController,
+                                    )
+                                  ],
+                                ),
+                                actions: <Widget>[
+                                  CupertinoActionSheetAction(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                      },
+                                      child: Text("Cancel")),
+                                  CupertinoActionSheetAction(
+                                      onPressed: () {
+                                        var name = nameEditingController.text;
+                                        if (name.isNotEmpty) {
+                                          projectBloc.createProject(name);
+                                          Navigator.pop(context);
+                                        }
+                                      },
+                                      child: Text("Confirm"),
+                                      isDefaultAction: true),
+                                ],
+                              );
+                            },
+                          );
+                        }),
+                  )
+                ],
+              );
+            },
+          ))),
+          body: AnimatedBuilder(
+            animation: animationController,
+            builder: (_, __) {
+              double todoHeight = this.todoHeight, doingHeight = this.doingHeight, doneHeight = this.doneHeight;
 
-            return Stack(
-              children: <Widget>[
-                Positioned(
-                    top: doingHeight + todoHeight,
-                    height: doneHeight,
-                    width: MediaQuery.of(context).size.width,
-                    child: Container(
-                        color: Colors.blueGrey,
-                        child: SingleChildScrollView(
-                          key: UniqueKey(),
-                          child: Flex(
-                            key: UniqueKey(),
-                            direction: Axis.vertical,
-                            children: [
-                              ...buildChildren(doneTask),
-                              AnimatedBuilder(
-                                animation: animationController,
-                                builder: (_, __) {
-                                  return Transform.translate(
-                                      offset: Offset(animationController.value * MediaQuery.of(context).size.width, 0),
-                                      child: currentTask == null || currentTask.status != TaskStatus.doing
-                                          ? Container()
-                                          : Container(
-                                              color: Colors.white,
-                                              child: ListTile(
-                                                title: Text(currentTask.title),
-                                              ),
-                                            ));
-                                },
-                              )
-                            ],
+              if (currentTask != null) {
+                if (interactingStatus == InteractingStatus.move) {
+                  switch (currentTask.status) {
+                    case TaskStatus.todo:
+                      todoHeight = todoHeight + (animationController.value + 1) * -unit;
+                      doingHeight = doingHeight + (animationController.value + 1) * unit;
+                      break;
+                    case TaskStatus.doing:
+                      doingHeight = doingHeight + (animationController.value + 1) * -unit;
+                      doneHeight = doneHeight + (animationController.value + 1) * unit;
+                      break;
+                    default:
+                      break;
+                  }
+                } else if (interactingStatus == InteractingStatus.delete) {
+                  double initialTodoHeight = (todoTask.length / task.length) * height;
+                  double initialDoingHeight = (doingTask.length / task.length) * height;
+                  double initialDoneHeight = (doneTask.length / task.length) * height;
+
+                  switch (currentTask.status) {
+                    case TaskStatus.todo:
+                      double deltaX = height * (todoTask.length - 1) / (task.length - 1) - initialTodoHeight;
+                      double deltaY = height * (doingTask.length) / (task.length - 1) - initialDoingHeight;
+                      double deltaZ = height * (doneTask.length) / (task.length - 1) - initialDoneHeight;
+
+                      print(initialTodoHeight);
+                      print(deltaX);
+
+                      print(initialDoingHeight);
+                      print(deltaY);
+
+                      print(initialDoneHeight);
+                      print(deltaZ);
+
+                      todoHeight = initialTodoHeight + (animationController.value + 1) * deltaX;
+                      doingHeight = initialDoingHeight + (animationController.value + 1) * deltaY;
+                      doneHeight = initialDoneHeight + (animationController.value + 1) * deltaZ;
+
+                      print(todoHeight);
+                      print(doingHeight);
+                      print(doneHeight);
+                      break;
+                    default:
+                      break;
+                  }
+                }
+              }
+
+              if (task.isEmpty) {
+                return Stack(
+                  children: <Widget>[
+                    Positioned(
+                        top: 0,
+                        height: height,
+                        width: MediaQuery.of(context).size.width,
+                        child: Material(
+                          color: Colors.blueAccent,
+                          child: Ink(
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => TaskCreatePage()));
+                              },
+                              child: Center(
+                                  child: Transform.scale(
+                                scale: 5,
+                                child: Icon(
+                                  Icons.add,
+                                  color: Colors.white,
+                                ),
+                              )),
+                            ),
                           ),
-                        ))),
-                //Doing section.
-                Positioned(
-                    top: todoHeight,
-                    height: doingHeight,
-                    //height: doingHeight + animationController.value * -48,
+                        ))
+                  ],
+                );
+              }
+
+              return Stack(
+                children: <Widget>[
+                  Positioned(
+                      top: doingHeight + todoHeight,
+                      height: doneHeight,
+                      width: MediaQuery.of(context).size.width,
+                      child: Container(
+                          color: Colors.blueAccent,
+                          child: SingleChildScrollView(
+                            key: UniqueKey(),
+                            child: Flex(
+                              key: UniqueKey(),
+                              direction: Axis.vertical,
+                              children: [
+                                ...buildChildren(doneTask),
+                                AnimatedBuilder(
+                                  animation: animationController,
+                                  builder: (_, __) {
+                                    return Transform.translate(
+                                        offset: Offset(animationController.value * MediaQuery.of(context).size.width, 0),
+                                        child: currentTask == null ||
+                                                currentTask.status != TaskStatus.doing ||
+                                                interactingStatus == InteractingStatus.delete
+                                            ? Container()
+                                            : Container(
+                                                color: Colors.white,
+                                                child: ListTile(
+                                                  title: Text(currentTask.title),
+                                                ),
+                                              ));
+                                  },
+                                )
+                              ],
+                            ),
+                          ))),
+                  //Doing section.
+                  Positioned(
+                      top: todoHeight,
+                      height: doingHeight,
+                      //height: doingHeight + animationController.value * -48,
+                      width: MediaQuery.of(context).size.width,
+                      child: Material(
+                          elevation: 8,
+                          child: Container(
+                              //height: animationController.value * -20,
+                              color: Colors.redAccent,
+                              child: SingleChildScrollView(
+                                child: Flex(
+                                  key: UniqueKey(),
+                                  direction: Axis.vertical,
+                                  children: [
+                                    ...buildChildren(doingTask),
+                                    Transform.translate(
+                                        offset: Offset(animationController.value * MediaQuery.of(context).size.width, 0),
+                                        child: currentTask == null ||
+                                                currentTask.status != TaskStatus.todo ||
+                                                interactingStatus == InteractingStatus.delete
+                                            ? Container()
+                                            : Container(
+                                                color: Colors.white,
+                                                child: ListTile(
+                                                  title: Text(currentTask.title),
+                                                ),
+                                              ))
+                                  ],
+                                ),
+                              )))),
+                  //Todo section
+                  Positioned(
+                    top: 0,
+                    height: todoHeight,
                     width: MediaQuery.of(context).size.width,
                     child: Material(
-                        elevation: 8,
-                        child: Container(
-                            //height: animationController.value * -20,
-                            color: Colors.redAccent,
-                            child: SingleChildScrollView(
-                              child: Flex(
-                                key: UniqueKey(),
-                                direction: Axis.vertical,
-                                children: [
-                                  ...buildChildren(doingTask),
-                                  Transform.translate(
-                                      offset: Offset(animationController.value * MediaQuery.of(context).size.width, 0),
-                                      child: currentTask == null || currentTask.status != TaskStatus.todo
-                                          ? Container()
-                                          : Container(
-                                              color: Colors.white,
-                                              child: ListTile(
-                                                title: Text(currentTask.title),
-                                              ),
-                                            ))
-                                ],
-                              ),
-                            )))),
-                //Todo section
-                Positioned(
-                  top: 0,
-                  height: todoHeight,
-                  width: MediaQuery.of(context).size.width,
-                  child: Material(
-                    elevation: 8,
-                    color: Colors.blueAccent,
-                    child: Container(
-                        color: Colors.blueAccent,
-                        child: SingleChildScrollView(
-                          child: Flex(
-                            key: UniqueKey(),
-                            direction: Axis.vertical,
-                            children: <Widget>[...buildChildren(todoTask)],
-                          ),
-                        )),
-                  ),
-                )
-              ],
-            );
-          },
-        ));
-
-//    return Scaffold(
-//      body: Stack(
-//        children: <Widget>[
-//          Positioned(
-//              top: height*2,
-//              height: MediaQuery.of(context).size.height,
-//              width: MediaQuery.of(context).size.width,
-//              child: Container(
-//                height: MediaQuery.of(context).size.height,
-//                color: Colors.blueGrey,
-//                child: DragTarget(
-//                  builder: (_, __, ____) {
-//                    return Flex(
-//                      direction: Axis.vertical,
-//                      children: buildChildren(doneTask),
-//                    );
-//                  },
-//                  onAccept: (Task acceptedData) {
-//                    switch (acceptedData.status) {
-//                      case TaskStatus.todo:
-//                        todoTask.remove(acceptedData);
-//                        break;
-//                      case TaskStatus.doing:
-//                        doingTask.remove(acceptedData);
-//                        break;
-//                      default:
-//                        break;
-//                    }
-//                    setState(() {
-//                      acceptedData.status = TaskStatus.done;
-//                      doneTask.addIfNotExist(acceptedData);
-//                    });
-//                  },
-//                  onWillAccept: (Task data) {
-//                    return true;
-//                  },
-//                ),
-//              )),
-//          Positioned(
-//              top: height+height*0.5,
-//              height: height*0.5,
-//              width: MediaQuery.of(context).size.width,
-//              child: Material(
-//                elevation: 8,
-//                child: Container(
-//                  height: height*2,
-//                  color: Colors.redAccent,
-//                  child: DragTarget(
-//                    builder: (_, __, ____) {
-//                      return Flex(
-//                        direction: Axis.vertical,
-//                        children: buildChildren(doingTask),
-//                      );
-//                    },
-//                    onAccept: (Task acceptedData) {
-//                      switch (acceptedData.status) {
-//                        case TaskStatus.todo:
-//                          todoTask.remove(acceptedData);
-//                          break;
-//                        case TaskStatus.done:
-//                          doneTask.remove(acceptedData);
-//                          break;
-//                        default:
-//                          break;
-//                      }
-//                      setState(() {
-//                        acceptedData.status = TaskStatus.doing;
-//                        doingTask.addIfNotExist(acceptedData);
-//                      });
-//                    },
-//                    onWillAccept: (Task data) {
-//                      return true;
-//                    },
-//                  ),
-//                ),
-//              )),
-//          Positioned(
-//            top: 0,
-//            height: height+height*0.5,
-//            width: MediaQuery.of(context).size.width,
-//            child: Material(
-//              elevation: 8,
-//              color: Colors.blueAccent,
-//              child: Container(
-//                height: height * 1,
-//                color: Colors.blueAccent,
-//                child: DragTarget(
-//                  builder: (_, __, ____) {
-//                    return Flex(
-//                      direction: Axis.vertical,
-//                      children: [SizedBox(height: 28),...buildChildren(todoTask)],
-//                    );
-//                  },
-//                  onAccept: (Task acceptedData) {
-//                    switch (acceptedData.status) {
-//                      case TaskStatus.done:
-//                        doneTask.remove(acceptedData);
-//                        break;
-//                      case TaskStatus.doing:
-//                        doingTask.remove(acceptedData);
-//                        break;
-//                      default:
-//                        break;
-//                    }
-//                    setState(() {
-//                      acceptedData.status = TaskStatus.todo;
-//                      todoTask.addIfNotExist(acceptedData);
-//                    });
-//                  },
-//                  onWillAccept: (Task data) {
-//                    return true;
-//                  },
-//                ),
-//              ),
-//            ),
-//          )
-//        ],
-//      ),
-//    );
+                      elevation: 8,
+                      color: Colors.lightBlue,
+                      child: Container(
+                          color: Colors.lightBlue,
+                          child: SingleChildScrollView(
+                            child: Flex(
+                              key: UniqueKey(),
+                              direction: Axis.vertical,
+                              children: <Widget>[...buildChildren(todoTask)],
+                            ),
+                          )),
+                    ),
+                  )
+                ],
+              );
+            },
+          )),
+    );
   }
 
-//  List<Widget> buildChildren(List<Task> tasks) {
-//    return tasks
-//        .map((e) => Draggable(
-//            data: e,
-//            child: AnimatedTaskTile(task: e),
-//            feedback: Transform.scale(scale: 1.2, child: TaskTile(task: e)),
-//            childWhenDragging: Container()))
-//        .toList();
-//  }
-
   List<Widget> buildChildren(List<Task> tasks) {
+    print(tasks);
     return tasks.map((e) {
       return Custom.CustomDismissible(
         secondaryBackground: Container(
@@ -478,6 +587,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             setState(() {
               currentTask = null;
               dismissibleKeys.remove(e);
+
               switch (e.status) {
                 case TaskStatus.todo:
                   todoTask.remove(e);
@@ -492,10 +602,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   break;
               }
               computeHeight();
-              taskBloc.deleteTask(e);
-//              setState(() {
-//                computeHeight();
-//              });
+              projectBloc.removeTask(e);
             });
             return true;
           } else {
@@ -505,6 +612,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   currentTask = null;
 
                   e.status = TaskStatus.doing;
+
+                  projectBloc.updateCurrent();
+
+                  task.remove(e);
+                  task.add(e);
 
                   todoTask.remove(e);
                   doingTask.add(e);
@@ -518,6 +630,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   currentTask = null;
 
                   e.status = TaskStatus.done;
+
+                  projectBloc.updateCurrent();
+
+                  task.remove(e);
+                  task.add(e);
 
                   doingTask.remove(e);
                   doneTask.add(e);
