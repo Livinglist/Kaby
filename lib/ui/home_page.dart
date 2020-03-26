@@ -402,33 +402,31 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   double initialTodoHeight = (todoTask.length / task.length) * height;
                   double initialDoingHeight = (doingTask.length / task.length) * height;
                   double initialDoneHeight = (doneTask.length / task.length) * height;
+                  double deltaX, deltaY, deltaZ;
 
                   switch (currentTask.status) {
                     case TaskStatus.todo:
-                      double deltaX = height * (todoTask.length - 1) / (task.length - 1) - initialTodoHeight;
-                      double deltaY = height * (doingTask.length) / (task.length - 1) - initialDoingHeight;
-                      double deltaZ = height * (doneTask.length) / (task.length - 1) - initialDoneHeight;
-
-                      print(initialTodoHeight);
-                      print(deltaX);
-
-                      print(initialDoingHeight);
-                      print(deltaY);
-
-                      print(initialDoneHeight);
-                      print(deltaZ);
-
-                      todoHeight = initialTodoHeight + (animationController.value + 1) * deltaX;
-                      doingHeight = initialDoingHeight + (animationController.value + 1) * deltaY;
-                      doneHeight = initialDoneHeight + (animationController.value + 1) * deltaZ;
-
-                      print(todoHeight);
-                      print(doingHeight);
-                      print(doneHeight);
+                      deltaX = height * (todoTask.length - 1) / (task.length - 1) - initialTodoHeight;
+                      deltaY = height * (doingTask.length) / (task.length - 1) - initialDoingHeight;
+                      deltaZ = height * (doneTask.length) / (task.length - 1) - initialDoneHeight;
+                      break;
+                    case TaskStatus.doing:
+                      deltaX = height * (todoTask.length) / (task.length - 1) - initialTodoHeight;
+                      deltaY = height * (doingTask.length - 1) / (task.length - 1) - initialDoingHeight;
+                      deltaZ = height * (doneTask.length) / (task.length - 1) - initialDoneHeight;
+                      break;
+                    case TaskStatus.done:
+                      deltaX = height * (todoTask.length) / (task.length - 1) - initialTodoHeight;
+                      deltaY = height * (doingTask.length) / (task.length - 1) - initialDoingHeight;
+                      deltaZ = height * (doneTask.length - 1) / (task.length - 1) - initialDoneHeight;
                       break;
                     default:
                       break;
                   }
+
+                  todoHeight = initialTodoHeight + (animationController.value + 1) * deltaX;
+                  doingHeight = initialDoingHeight + (animationController.value + 1) * deltaY;
+                  doneHeight = initialDoneHeight + (animationController.value + 1) * deltaZ;
                 }
               }
 
