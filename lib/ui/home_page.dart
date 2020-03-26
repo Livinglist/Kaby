@@ -32,8 +32,6 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
       stream: projectBloc.currentProject,
       builder: (_, AsyncSnapshot<Project> snapshot) {
         if (snapshot.hasData) {
-          List<Task> task = snapshot.data.tasks;
-
           return HomePage(
             key: UniqueKey(),
             project: snapshot.data,
@@ -65,7 +63,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final drawerKey = GlobalKey<Custom.CustomDismissibleState>();
   final nameEditingController = TextEditingController();
-  int projectId = -1;
   Map<Task, GlobalKey<Custom.CustomDismissibleState>> dismissibleKeys;
 
   InteractingStatus interactingStatus = InteractingStatus.move;
@@ -179,31 +176,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     doneTask = task.where((e) => e.status == TaskStatus.done).toList();
 
     Color appBarColor;
-    Color appBarColorDeep;
     String appBarTitle;
+
     var temp = [...todoTask, ...doingTask, ...doneTask];
+
     if (temp.isNotEmpty) {
       switch (temp[0].status) {
         case TaskStatus.todo:
           appBarColor = Colors.lightBlue;
-          appBarColorDeep = Colors.blueAccent;
           appBarTitle = "Todo";
           break;
         case TaskStatus.doing:
           appBarColor = Colors.redAccent;
-          appBarColorDeep = Colors.red;
           appBarTitle = "Doing";
           break;
         case TaskStatus.done:
           appBarColor = Colors.blueAccent;
-          appBarColorDeep = Colors.blue[800];
           appBarTitle = "Done";
           break;
         default:
       }
     } else {
       appBarColor = Colors.blueAccent;
-      appBarColorDeep = Colors.blue[800];
       appBarTitle = "Todo";
     }
 
@@ -266,6 +260,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           },
         ),
         actions: <Widget>[
+          //If there is no task, show the bottom on the center of the screen.
           if (task.isNotEmpty)
             AnimatedBuilder(
               animation: iconAnimationController,
@@ -286,107 +281,104 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ),
       body: Scaffold(
           key: scaffoldKey,
-          drawer: Drawer(
-              child: SingleChildScrollView(
-                  child: StreamBuilder(
-            stream: projectBloc.allProjects,
-            builder: (_, AsyncSnapshot<List<Project>> snapshot) {
-              return Flex(
-                direction: Axis.vertical,
-                children: <Widget>[
-                  ListTile(
-                    title: Text("My Kanban"),
-                    onTap: () {
-                      projectId = -1;
-                      projectBloc.getKanban();
-                      Navigator.pop(context);
-                    },
-                  ),
-                  Container(child: ListTile(title: Text("Projects")), color: appBarColor),
-                  if (snapshot.hasData)
-                    for (var p in snapshot.data)
-                      Container(
-                        color: widget.project.id == p.id ? appBarColorDeep : Colors.white,
-                        child: ListTile(
-                          title: Text(p.name),
+          drawer: Container(
+            color: Colors.white,
+            child: Drawer(
+                elevation: 0,
+                child: SingleChildScrollView(
+                    child: StreamBuilder(
+                  stream: projectBloc.allProjects,
+                  builder: (_, AsyncSnapshot<List<Project>> snapshot) {
+                    return Flex(
+                      direction: Axis.vertical,
+                      children: <Widget>[
+                        ListTile(
+                          title: Text("My Kanban"),
                           onTap: () {
-                            projectId = p.id;
-                            projectBloc.getProjectById(p.uid);
-                            Navigator.pop(context);
-                          },
-                          onLongPress: () {
-                            showCupertinoModalPopup<bool>(
-                                context: context,
-                                builder: (BuildContext context) => CupertinoActionSheet(
-                                  message: Text("Are you sure?"),
-                                  cancelButton: CupertinoActionSheetAction(
-                                    isDefaultAction: true,
-                                    child: Text('Cancel'),
-                                    onPressed: () {
-                                      Navigator.pop(context, false);
-                                    },
-                                  ),
-                                  actions: <Widget>[
-                                    CupertinoActionSheetAction(
-                                      isDestructiveAction: true,
-                                      child: Text('Remove ${p.name}'),
-                                      onPressed: () {
-                                        Navigator.pop(context, true);
-                                      },
-                                    ),
-                                  ],
-                                )).then((value) {
-                              if (value) {
-                                projectBloc.deleteProject(p);
-                              }
-                            });
+                            projectBloc.getKanban();
+                            //Navigator.pop(context);
                           },
                         ),
-                      ),
-                  Container(
-                    color: appBarColor,
-                    child: ListTile(
-                        title: Icon(Icons.add),
-                        onTap: () {
-                          showDialog<bool>(
-                            context: context,
-                            builder: (context) {
-                              return CupertinoAlertDialog(
-                                title: Text('Name Your Project'),
-                                content: Flex(
-                                  direction: Axis.vertical,
-                                  children: <Widget>[
-                                    CupertinoTextField(
-                                      controller: nameEditingController,
-                                    )
-                                  ],
-                                ),
-                                actions: <Widget>[
-                                  CupertinoActionSheetAction(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                      },
-                                      child: Text("Cancel")),
-                                  CupertinoActionSheetAction(
-                                      onPressed: () {
-                                        var name = nameEditingController.text;
-                                        if (name.isNotEmpty) {
-                                          projectBloc.createProject(name);
-                                          Navigator.pop(context);
-                                        }
-                                      },
-                                      child: Text("Confirm"),
-                                      isDefaultAction: true),
-                                ],
-                              );
-                            },
-                          );
-                        }),
-                  )
-                ],
-              );
-            },
-          ))),
+                        Container(
+                            child: Flex(
+                          direction: Axis.horizontal,
+                          children: <Widget>[
+                            Flexible(
+                              child: Divider(),
+                              flex: 1,
+                            ),
+                            Flexible(
+                              child: ListTile(
+                                  title: Text(
+                                "Projects",
+                                textAlign: TextAlign.center,
+                              )),
+                              flex: 1,
+                            ),
+                            Flexible(
+                              child: Divider(),
+                              flex: 1,
+                            )
+                          ],
+                        )),
+                        if (snapshot.hasData)
+                          for (var p in snapshot.data)
+                            Container(
+                              color: widget.project.id == p.id ? appBarColor : Colors.transparent,
+                              child: ListTile(
+                                title: Text(p.name),
+                                onTap: () {
+                                  projectBloc.getProjectById(p.uid);
+                                  //Navigator.pop(context);
+                                },
+                                onLongPress: () => onProjectListTileLongPressed(p),
+                              ),
+                            ),
+                        Container(
+                          color: Colors.transparent,
+                          child: ListTile(
+                              title: Icon(Icons.add),
+                              onTap: () {
+                                showDialog<bool>(
+                                  context: context,
+                                  builder: (context) {
+                                    return CupertinoAlertDialog(
+                                      title: Text('Name Your Project'),
+                                      content: Flex(
+                                        direction: Axis.vertical,
+                                        children: <Widget>[
+                                          CupertinoTextField(
+                                            controller: nameEditingController,
+                                          )
+                                        ],
+                                      ),
+                                      actions: <Widget>[
+                                        CupertinoActionSheetAction(
+                                            onPressed: () {
+                                              Navigator.pop(context);
+                                            },
+                                            child: Text("Cancel")),
+                                        CupertinoActionSheetAction(
+                                            onPressed: () {
+                                              var name = nameEditingController.text;
+                                              if (name.isNotEmpty) {
+                                                projectBloc.createProject(name);
+                                                Navigator.pop(context);
+                                              }
+                                            },
+                                            child: Text("Confirm"),
+                                            isDefaultAction: true),
+                                      ],
+                                    );
+                                  },
+                                );
+                              }),
+                        )
+                      ],
+                    );
+                  },
+                ))),
+          ),
           body: AnimatedBuilder(
             animation: animationController,
             builder: (_, __) {
@@ -566,6 +558,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     print(tasks);
     return tasks.map((e) {
       return Custom.CustomDismissible(
+        direction: Custom.DismissDirection.horizontal,
         secondaryBackground: Container(
           alignment: Alignment.centerRight,
           padding: EdgeInsets.only(right: 20.0),
@@ -580,6 +573,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           color: Colors.white70,
           child: ListTile(
             title: Text(e.title),
+            onTap: () {
+              showModalBottomSheet(
+                  context: context,
+                  builder: (_) {
+                    return Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                        color: Colors.white,
+                      ),
+                      child: Center(
+                        child: Text(e.description ?? "No details"),
+                      ),
+                    );
+                  });
+            },
           ),
         ),
         confirmDismiss: (direction) async {
@@ -643,16 +652,55 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   doneHeight += unit;
                 });
                 break;
+              case TaskStatus.done:
+                showSnackBar("This is already done!");
+                break;
               default:
                 break;
             }
           }
-          //animationController.animateTo(-1);
           return false;
         },
         onDismissed: (direction) {},
         onResize: () {},
       );
     }).toList();
+  }
+
+  void onProjectListTileLongPressed(Project p) => showCupertinoModalPopup<bool>(
+          context: context,
+          builder: (BuildContext context) => CupertinoActionSheet(
+                message: Text("Are you sure?"),
+                cancelButton: CupertinoActionSheetAction(
+                  isDefaultAction: true,
+                  child: Text('Cancel'),
+                  onPressed: () {
+                    Navigator.pop(context, false);
+                  },
+                ),
+                actions: <Widget>[
+                  CupertinoActionSheetAction(
+                    isDestructiveAction: true,
+                    child: Text('Remove ${p.name}'),
+                    onPressed: () {
+                      Navigator.pop(context, true);
+                    },
+                  ),
+                ],
+              )).then((value) {
+        if (value) {
+          projectBloc.deleteProject(p);
+        }
+      });
+
+  void showSnackBar(String msg) {
+    assert(msg != null);
+    scaffoldKey.currentState.showSnackBar(SnackBar(
+        content: Text(msg),
+        action: SnackBarAction(
+            label: "Dismiss",
+            onPressed: () {
+              scaffoldKey.currentState.hideCurrentSnackBar();
+            })));
   }
 }

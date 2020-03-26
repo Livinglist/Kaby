@@ -15,11 +15,14 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
   final descriptionController = TextEditingController();
   final formKey = GlobalKey<FormState>();
 
+  DateTime dueDate;
+
   Task task;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 8,
         actions: <Widget>[
@@ -30,7 +33,7 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                 var title = titleController.text;
                 var description = descriptionController.text;
 
-                task = Task.create(title: title, description: description);
+                task = Task.create(title: title, description: description, dueDate: dueDate);
 
                 projectBloc.addTask(task);
 
@@ -64,7 +67,24 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                   controller: descriptionController,
                   decoration: InputDecoration(hintText: "Description", labelText: "Description"),
                 ),
-              )
+              ),
+              Padding(
+                padding: EdgeInsets.all(12),
+                child: Text("Due Date"),
+              ),
+              Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Container(
+                    height: 300,
+                    width: MediaQuery.of(context).size.width,
+                    child: CupertinoDatePicker(
+                        use24hFormat: true,
+                        initialDateTime: DateTime.now().add(Duration(hours: 24 - DateTime.now().hour)),
+                        onDateTimeChanged: (DateTime dateTime) {
+                          dueDate = dateTime;
+                        },
+                        mode: CupertinoDatePickerMode.dateAndTime),
+                  ))
             ],
           ),
         ),

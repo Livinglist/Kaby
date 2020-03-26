@@ -18,6 +18,7 @@ class MyApp extends StatelessWidget {
       title: 'Kanban',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        canvasColor: Colors.transparent
       ),
       routes: {"/home_page": (_) => HomePageWrapper()},
       home: HomePageWrapper(),
