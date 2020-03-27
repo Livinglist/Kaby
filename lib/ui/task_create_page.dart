@@ -28,6 +28,7 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.lightBlue,
         elevation: 8,
         actions: <Widget>[
           IconButton(

@@ -90,7 +90,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       scaffoldKey.currentState?.drawerKey?.currentState?.controller?.addListener(() {
         iconAnimationController.value = scaffoldKey.currentState.drawerKey?.currentState?.controller?.value ?? 0;
       });
-      print("=========add post frame callback========");
+
       this.task = widget.allTasks;
       todoTask = task.where((e) => e.status == TaskStatus.todo).toList();
       doingTask = task.where((e) => e.status == TaskStatus.doing).toList();
@@ -199,8 +199,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         default:
       }
     } else {
-      appBarColor = Colors.blueAccent;
-      appBarTitle = "Todo";
+      appBarColor = Colors.lightBlue;
+      appBarTitle = "Empty";
     }
 
     //Newly added Task
@@ -209,10 +209,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       computeHeight();
     }
 
-    print("===============build===============");
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      print("=========add post frame callback========");
       this.task = widget.allTasks;
 
       todoTask = task.where((e) => e.status == TaskStatus.todo).toList();
@@ -222,7 +219,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       for (var task in dismissibleKeys.keys) {
         var dismissibleKey = dismissibleKeys[task];
 
-        print("================before==============${task.title}");
         dismissibleKey.currentState?.moveController?.addListener(() {
           setState(() {
             //Delete task.
@@ -246,15 +242,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           }
         });
       }
-
-      print("===============after=============");
     });
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: appBarColor,
-        title: Text(task.isEmpty ? "Empty" : appBarTitle),
+        title: Text(appBarTitle),
         elevation: 8,
         leading: IconButton(
           icon: AnimatedIcon(progress: iconAnimationController.drive(Tween<double>(begin: 0.0, end: 1.0)), icon: AnimatedIcons.menu_arrow),
@@ -372,6 +366,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                               var name = nameEditingController.text;
                                               if (name.isNotEmpty) {
                                                 scaffoldKey.currentState.closeDrawer();
+                                                Navigator.pop(context);
                                                 projectBloc.createProject(name);
                                               }
                                             },
@@ -392,8 +387,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             animation: animationController,
             builder: (_, __) {
               double todoHeight = this.todoHeight, doingHeight = this.doingHeight, doneHeight = this.doneHeight;
-
-              print("inside animated builder");
 
               if (currentTask != null) {
                 if (interactingStatus == InteractingStatus.move) {
@@ -444,8 +437,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 }
               }
 
-              print("inside animated builder 2");
-
               if (task.isEmpty) {
                 return Stack(
                   children: <Widget>[
@@ -454,7 +445,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         height: height,
                         width: MediaQuery.of(context).size.width,
                         child: Material(
-                          color: Colors.blueAccent,
+                          color: Colors.lightBlue,
                           child: Ink(
                             child: InkWell(
                               onTap: () {
@@ -629,33 +620,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         },
                       ),
                     );
-                    return Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
-                          color: Colors.white,
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Column(
-                            children: <Widget>[
-                              Text(
-                                e.title,
-                                style: TextStyle(fontSize: 18),
-                              ),
-                              SingleChildScrollView(
-                                child: Container(
-                                  width: MediaQuery.of(context).size.width,
-                                  child: Text(
-                                    e.description ?? "No details",
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                ),
-                              ),
-                              Spacer(),
-                              Text(e.dueDate?.toLocal()?.toCustomString() ?? "")
-                            ],
-                          ),
-                        ));
                   });
             },
           ),
