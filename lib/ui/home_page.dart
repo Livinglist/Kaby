@@ -61,7 +61,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  final drawerKey = GlobalKey<Custom.CustomDismissibleState>();
   final nameEditingController = TextEditingController();
   Map<Task, GlobalKey<Custom.CustomDismissibleState>> dismissibleKeys;
 
@@ -87,8 +86,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     iconAnimationController = AnimationController(vsync: this, lowerBound: 0.0, upperBound: 1.0, duration: Duration(microseconds: 300));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      scaffoldKey.currentState.drawerKey.currentState.controller.addListener(() {
-        iconAnimationController.value = scaffoldKey.currentState.drawerKey.currentState.controller.value;
+      scaffoldKey.currentState?.drawerKey?.currentState?.controller?.addListener(() {
+        iconAnimationController.value = scaffoldKey.currentState.drawerKey?.currentState?.controller?.value ?? 0;
       });
       print("=========add post frame callback========");
       this.task = widget.allTasks;
@@ -137,7 +136,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    print("disposed");
     this.animationController.dispose();
+    this.iconAnimationController.dispose();
     super.dispose();
   }
 
@@ -220,7 +221,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       for (var task in dismissibleKeys.keys) {
         var dismissibleKey = dismissibleKeys[task];
 
-        dismissibleKey.currentState.moveController.addListener(() {
+        print("================before==============${task.title}");
+        dismissibleKey.currentState?.moveController?.addListener(() {
           setState(() {
             //Delete task.
             if (dismissibleKey.currentState.dismissDirection == Custom.DismissDirection.endToStart) {
@@ -243,8 +245,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           }
         });
       }
+
+      print("===============after=============");
     });
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: appBarColor,
         title: Text(task.isEmpty ? "Empty" : appBarTitle),
@@ -271,7 +277,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     icon: Icon(Icons.add),
                     onPressed: () {
                       Navigator.push(context, MaterialPageRoute(builder: (_) => TaskCreatePage()));
-                      this.deactivate();
                     },
                   ),
                 );
@@ -384,6 +389,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             builder: (_, __) {
               double todoHeight = this.todoHeight, doingHeight = this.doingHeight, doneHeight = this.doneHeight;
 
+              print("inside animated builder");
+
               if (currentTask != null) {
                 if (interactingStatus == InteractingStatus.move) {
                   switch (currentTask.status) {
@@ -399,36 +406,41 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       break;
                   }
                 } else if (interactingStatus == InteractingStatus.delete) {
-                  double initialTodoHeight = (todoTask.length / task.length) * height;
-                  double initialDoingHeight = (doingTask.length / task.length) * height;
-                  double initialDoneHeight = (doneTask.length / task.length) * height;
-                  double deltaX, deltaY, deltaZ;
+                  if (task.length == 1) {
+                  } else {
+                    double initialTodoHeight = (todoTask.length / task.length) * height;
+                    double initialDoingHeight = (doingTask.length / task.length) * height;
+                    double initialDoneHeight = (doneTask.length / task.length) * height;
+                    double deltaX, deltaY, deltaZ;
 
-                  switch (currentTask.status) {
-                    case TaskStatus.todo:
-                      deltaX = height * (todoTask.length - 1) / (task.length - 1) - initialTodoHeight;
-                      deltaY = height * (doingTask.length) / (task.length - 1) - initialDoingHeight;
-                      deltaZ = height * (doneTask.length) / (task.length - 1) - initialDoneHeight;
-                      break;
-                    case TaskStatus.doing:
-                      deltaX = height * (todoTask.length) / (task.length - 1) - initialTodoHeight;
-                      deltaY = height * (doingTask.length - 1) / (task.length - 1) - initialDoingHeight;
-                      deltaZ = height * (doneTask.length) / (task.length - 1) - initialDoneHeight;
-                      break;
-                    case TaskStatus.done:
-                      deltaX = height * (todoTask.length) / (task.length - 1) - initialTodoHeight;
-                      deltaY = height * (doingTask.length) / (task.length - 1) - initialDoingHeight;
-                      deltaZ = height * (doneTask.length - 1) / (task.length - 1) - initialDoneHeight;
-                      break;
-                    default:
-                      break;
+                    switch (currentTask.status) {
+                      case TaskStatus.todo:
+                        deltaX = height * (todoTask.length - 1) / (task.length - 1) - initialTodoHeight;
+                        deltaY = height * (doingTask.length) / (task.length - 1) - initialDoingHeight;
+                        deltaZ = height * (doneTask.length) / (task.length - 1) - initialDoneHeight;
+                        break;
+                      case TaskStatus.doing:
+                        deltaX = height * (todoTask.length) / (task.length - 1) - initialTodoHeight;
+                        deltaY = height * (doingTask.length - 1) / (task.length - 1) - initialDoingHeight;
+                        deltaZ = height * (doneTask.length) / (task.length - 1) - initialDoneHeight;
+                        break;
+                      case TaskStatus.done:
+                        deltaX = height * (todoTask.length) / (task.length - 1) - initialTodoHeight;
+                        deltaY = height * (doingTask.length) / (task.length - 1) - initialDoingHeight;
+                        deltaZ = height * (doneTask.length - 1) / (task.length - 1) - initialDoneHeight;
+                        break;
+                      default:
+                        break;
+                    }
+
+                    todoHeight = initialTodoHeight + (animationController.value + 1) * deltaX;
+                    doingHeight = initialDoingHeight + (animationController.value + 1) * deltaY;
+                    doneHeight = initialDoneHeight + (animationController.value + 1) * deltaZ;
                   }
-
-                  todoHeight = initialTodoHeight + (animationController.value + 1) * deltaX;
-                  doingHeight = initialDoingHeight + (animationController.value + 1) * deltaY;
-                  doneHeight = initialDoneHeight + (animationController.value + 1) * deltaZ;
                 }
               }
+
+              print("inside animated builder 2");
 
               if (task.isEmpty) {
                 return Stack(
@@ -474,23 +486,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               direction: Axis.vertical,
                               children: [
                                 ...buildChildren(doneTask),
-                                AnimatedBuilder(
-                                  animation: animationController,
-                                  builder: (_, __) {
-                                    return Transform.translate(
-                                        offset: Offset(animationController.value * MediaQuery.of(context).size.width, 0),
-                                        child: currentTask == null ||
-                                                currentTask.status != TaskStatus.doing ||
-                                                interactingStatus == InteractingStatus.delete
+                                Transform.translate(
+                                    offset: Offset(animationController.value * MediaQuery.of(context).size.width, 0),
+                                    child:
+                                        currentTask == null || currentTask.status != TaskStatus.doing || interactingStatus == InteractingStatus.delete
                                             ? Container()
                                             : Container(
                                                 color: Colors.white,
                                                 child: ListTile(
                                                   title: Text(currentTask.title),
                                                 ),
-                                              ));
-                                  },
-                                )
+                                              ))
                               ],
                             ),
                           ))),
