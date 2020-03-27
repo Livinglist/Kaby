@@ -2,8 +2,10 @@ import 'dart:math';
 
 import 'package:flutter/material.dart' hide Scaffold, ScaffoldState;
 import 'package:flutter/cupertino.dart';
-import 'package:kanban/models/project.dart';
+import 'package:app_review/app_review.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
+import 'package:kanban/models/project.dart';
 import 'package:kanban/models/task.dart';
 import 'components/task_tile.dart';
 import 'package:kanban/utils/list_extension.dart';
@@ -13,6 +15,7 @@ import 'task_create_page.dart';
 import 'package:kanban/bloc/project_bloc.dart';
 import 'components/custom_scaffold.dart';
 import 'package:kanban/utils/datetime_extension.dart';
+import 'icon_page.dart';
 
 class HomePageWrapper extends StatefulWidget {
   @override
@@ -25,6 +28,12 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
     projectBloc.fetchAllProjects();
 
     super.initState();
+
+    AppReview.isRequestReviewAvailable.then((available) {
+      if (available) {
+        AppReview.requestReview;
+      }
+    });
   }
 
   @override
@@ -33,9 +42,15 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
       stream: projectBloc.currentProject,
       builder: (_, AsyncSnapshot<Project> snapshot) {
         if (snapshot.hasData) {
-          return HomePage(
-            key: UniqueKey(),
-            project: snapshot.data,
+          return StreamBuilder(
+            stream: projectBloc.isKanban,
+            builder: (_, AsyncSnapshot<bool> isKanbanSnapshot) {
+              return HomePage(
+                key: UniqueKey(),
+                project: snapshot.data,
+                isKanban: isKanbanSnapshot.data ?? true,
+              );
+            },
           );
         } else {
           print("no data");
@@ -51,8 +66,9 @@ enum InteractingStatus { delete, move }
 class HomePage extends StatefulWidget {
   final Project project;
   final List<Task> allTasks;
+  final bool isKanban;
 
-  HomePage({this.project, Key key})
+  HomePage({this.project, this.isKanban, Key key})
       : allTasks = project.tasks,
         super(key: key);
 
@@ -247,6 +263,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        centerTitle: true,
         backgroundColor: appBarColor,
         title: Text(appBarTitle),
         elevation: 8,
@@ -261,6 +278,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           },
         ),
         actions: <Widget>[
+          if (widget.isKanban == false)
+            AnimatedBuilder(
+              animation: iconAnimationController,
+              builder: (_, __) {
+                return Opacity(
+                    opacity: iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value,
+                    child: IconButton(
+                      icon: Icon(FontAwesomeIconsMap[widget.project.icon]),
+                      onPressed: () {
+                        if (iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value != 0)
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => IconPage()));
+                      },
+                    ));
+              },
+            ),
           //If there is no task, show the bottom on the center of the screen.
           if (task.isNotEmpty)
             AnimatedBuilder(
@@ -271,7 +303,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   child: IconButton(
                     icon: Icon(Icons.add),
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => TaskCreatePage()));
+                      if (iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value != 0)
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => TaskCreatePage()));
                     },
                   ),
                 );
@@ -292,13 +325,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     return Flex(
                       direction: Axis.vertical,
                       children: <Widget>[
-                        ListTile(
-                          title: Text("My Kanban"),
-                          onTap: () {
-                            scaffoldKey.currentState.closeDrawer();
-                            projectBloc.getKanban();
-                            //Navigator.pop(context);
-                          },
+                        Container(
+                          color: widget.isKanban ? appBarColor : Colors.white,
+                          child: ListTile(
+                            leading: Icon(FontAwesomeIcons.gameBoardAlt, color: widget.isKanban ? Colors.white : Colors.black54),
+                            title: Text(
+                              "My Kanban",
+                              style: TextStyle(color: widget.isKanban ? Colors.white : Colors.black),
+                            ),
+                            onTap: () {
+                              scaffoldKey.currentState.closeDrawer();
+                              projectBloc.getKanban();
+                              //Navigator.pop(context);
+                            },
+                          ),
                         ),
                         Container(
                             child: Flex(
@@ -325,9 +365,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         if (snapshot.hasData)
                           for (var p in snapshot.data)
                             Container(
-                              color: widget.project.id == p.id ? appBarColor : Colors.transparent,
+                              color: (widget.project.id == p.id && widget.isKanban == false) ? appBarColor : Colors.transparent,
                               child: ListTile(
-                                title: Text(p.name),
+                                leading: Icon(
+                                  FontAwesomeIconsMap[p.icon],
+                                  color: (widget.project.id == p.id && widget.isKanban == false) ? Colors.white : Colors.black54,
+                                ),
+                                title: Text(
+                                  p.name,
+                                  style: TextStyle(
+                                    color: (widget.project.id == p.id && widget.isKanban == false) ? Colors.white : Colors.black,
+                                  ),
+                                ),
                                 onTap: () {
                                   scaffoldKey.currentState.closeDrawer();
                                   projectBloc.getProjectById(p.uid);
@@ -365,6 +414,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                             onPressed: () {
                                               var name = nameEditingController.text;
                                               if (name.isNotEmpty) {
+                                                nameEditingController.clear();
                                                 scaffoldKey.currentState.closeDrawer();
                                                 Navigator.pop(context);
                                                 projectBloc.createProject(name);
@@ -713,9 +763,53 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 actions: <Widget>[
                   CupertinoActionSheetAction(
+                    isDestructiveAction: false,
+                    child: Text('Edit Name'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      showDialog<bool>(
+                        context: context,
+                        builder: (context) {
+                          return CupertinoAlertDialog(
+                            content: Flex(
+                              direction: Axis.vertical,
+                              children: <Widget>[
+                                SizedBox(height: 12),
+                                CupertinoTextField(
+                                  controller: nameEditingController,
+                                )
+                              ],
+                            ),
+                            actions: <Widget>[
+                              CupertinoActionSheetAction(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                  child: Text("Cancel")),
+                              CupertinoActionSheetAction(
+                                  onPressed: () {
+                                    var name = nameEditingController.text;
+                                    if (name.isNotEmpty) {
+                                      nameEditingController.clear();
+                                      scaffoldKey.currentState.closeDrawer();
+                                      Navigator.pop(context);
+                                      p.name = name;
+                                      projectBloc.updateProject(p);
+                                    }
+                                  },
+                                  child: Text("Confirm"),
+                                  isDefaultAction: true),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  CupertinoActionSheetAction(
                     isDestructiveAction: true,
                     child: Text('Remove ${p.name}'),
                     onPressed: () {
+                      scaffoldKey.currentState.closeDrawer();
                       Navigator.pop(context, true);
                     },
                   ),

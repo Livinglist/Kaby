@@ -9,12 +9,14 @@ class ProjectBloc {
   final _projectsFetcher = BehaviorSubject<List<Project>>();
   final _currentProjectFetcher = BehaviorSubject<Project>();
   final _kanbanFetcher = BehaviorSubject<Project>();
+  final _isKanbanFetcher = BehaviorSubject<bool>();
 
   bool _isKanban = false;
 
   Stream<List<Project>> get allProjects => _projectsFetcher.stream;
   Stream<Project> get currentProject => _currentProjectFetcher.stream;
   Stream<Project> get kanban => _kanbanFetcher.stream;
+  Stream<bool> get isKanban => _isKanbanFetcher.stream;
 
   List<Project> _allProjects = [];
   Project _currentProject;
@@ -22,6 +24,7 @@ class ProjectBloc {
 
   List<Project> get allProjectList => _allProjects;
   Project get currentProjectInstance => _currentProject;
+  //bool get isKanban => _isKanban;
 
   void fetchAllProjects() async {
     var allProjects = await repo.getAllProjects();
@@ -34,6 +37,7 @@ class ProjectBloc {
     _currentProject = _kanban;
 
     _isKanban = true;
+    _isKanbanFetcher.sink.add(_isKanban);
     _projectsFetcher.sink.add(_allProjects);
     _currentProjectFetcher.sink.add(_currentProject);
   }
@@ -47,12 +51,17 @@ class ProjectBloc {
     _currentProject = _kanban;
     _currentProjectFetcher.sink.add(_currentProject);
     _isKanban = true;
+    _isKanbanFetcher.sink.add(_isKanban);
   }
 
   void getProjectById(String uid) {
     _currentProject = _allProjects.singleWhere((p) => p.uid == uid, orElse: null);
     if (_currentProject != null) {
       _isKanban = false;
+      _isKanbanFetcher.sink.add(_isKanban);
+    } else {
+      _isKanban = true;
+      _isKanbanFetcher.sink.add(_isKanban);
     }
     _currentProjectFetcher.sink.add(_currentProject);
   }
@@ -68,11 +77,25 @@ class ProjectBloc {
   void deleteProject(Project project) {
     _allProjects.remove(project);
     _projectsFetcher.sink.add(_allProjects);
-    if(_currentProject == project){
-      _currentProject = _allProjects.last;
+    if (_currentProject == project) {
+      if (_allProjects.isNotEmpty)
+        _currentProject = _allProjects.last;
+      else
+        _currentProject = _kanban;
     }
     _currentProjectFetcher.sink.add(_currentProject);
     repo.deleteProject(project);
+  }
+
+  void updateIcon(String iconString) {
+    if (_isKanban) {
+      throw (Exception("Exception:\n\tIcon of 'My Kanban' should not be customizable"));
+    } else {
+      _currentProject.icon = iconString;
+      repo.updateProject(_currentProject);
+      _currentProjectFetcher.sink.add(_currentProject);
+      _projectsFetcher.sink.add(_allProjects);
+    }
   }
 
   void updateProject(Project project) {
@@ -81,9 +104,16 @@ class ProjectBloc {
       _currentProject = _kanban;
       repo.setMyKanban(project);
     } else {
+      print("upate the project the name now is ${project.name}");
       repo.updateProject(project);
       _projectsFetcher.sink.add(_allProjects);
     }
+  }
+
+  void changeNameById(String name, String uid) {
+    assert(_isKanban == false);
+    _allProjects.singleWhere((p) => p.uid == uid, orElse: null)?.name = name;
+    _projectsFetcher.sink.add(_allProjects);
   }
 
   void addTask(Task task) {
@@ -122,6 +152,7 @@ class ProjectBloc {
     _projectsFetcher.close();
     _currentProjectFetcher.close();
     _kanbanFetcher.close();
+    _isKanbanFetcher.close();
   }
 }
 
