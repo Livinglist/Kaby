@@ -27,7 +27,9 @@ class Task {
 
   Task({this.title, this.description, this.createdDate, this.finishedDate, this.dueDate, this.status});
 
-  Task.create({this.title, this.description, this.dueDate}) : this.createdDate = DateTime.now().toUtc();
+  Task.create({this.title, this.description, DateTime dueDate})
+      : this.dueDate = dueDate?.toUtc() ?? null,
+        this.createdDate = DateTime.now().toUtc();
 
   Task.fromMap(Map map) : this.createdDate = map[createdDateKey] == "null" ? null : DateTime.parse(map[createdDateKey]) {
     this.id = map[idKey];

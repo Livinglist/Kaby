@@ -12,6 +12,7 @@ import 'components/custom_drawer.dart' as CustomDrawer;
 import 'task_create_page.dart';
 import 'package:kanban/bloc/project_bloc.dart';
 import 'components/custom_scaffold.dart';
+import 'package:kanban/utils/datetime_extension.dart';
 
 class HomePageWrapper extends StatefulWidget {
   @override
@@ -300,6 +301,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         ListTile(
                           title: Text("My Kanban"),
                           onTap: () {
+                            scaffoldKey.currentState.closeDrawer();
                             projectBloc.getKanban();
                             //Navigator.pop(context);
                           },
@@ -333,6 +335,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               child: ListTile(
                                 title: Text(p.name),
                                 onTap: () {
+                                  scaffoldKey.currentState.closeDrawer();
                                   projectBloc.getProjectById(p.uid);
                                   //Navigator.pop(context);
                                 },
@@ -352,6 +355,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                       content: Flex(
                                         direction: Axis.vertical,
                                         children: <Widget>[
+                                          SizedBox(height: 12),
                                           CupertinoTextField(
                                             controller: nameEditingController,
                                           )
@@ -367,8 +371,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                             onPressed: () {
                                               var name = nameEditingController.text;
                                               if (name.isNotEmpty) {
+                                                scaffoldKey.currentState.closeDrawer();
                                                 projectBloc.createProject(name);
-                                                Navigator.pop(context);
                                               }
                                             },
                                             child: Text("Confirm"),
@@ -579,18 +583,79 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             title: Text(e.title),
             onTap: () {
               showModalBottomSheet(
+                  isScrollControlled: true,
                   context: context,
                   builder: (_) {
                     return Container(
-                      height: 200,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
                         color: Colors.white,
                       ),
-                      child: Center(
-                        child: Text(e.description ?? "No details"),
+                      child: DraggableScrollableSheet(
+                        expand: false,
+                        maxChildSize: 0.9,
+                        builder: (_, scrollController) {
+                          return SingleChildScrollView(
+                              //physics: NeverScrollableScrollPhysics(),
+                              controller: scrollController,
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    Text(
+                                      e.title,
+                                      style: TextStyle(fontSize: 20),
+                                    ),
+                                    SizedBox(
+                                      height: 12,
+                                    ),
+                                    Flexible(
+                                      child: Container(
+                                        width: MediaQuery.of(context).size.width,
+                                        child: Text(
+                                          e.description ?? "No details",
+                                          style: TextStyle(fontSize: 16),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 12,
+                                    ),
+                                    Text(e.dueDate == null ? "" : "Due by ${e.dueDate.toLocal().toCustomString()}")
+                                  ],
+                                ),
+                              ));
+                        },
                       ),
                     );
+                    return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                          color: Colors.white,
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Column(
+                            children: <Widget>[
+                              Text(
+                                e.title,
+                                style: TextStyle(fontSize: 18),
+                              ),
+                              SingleChildScrollView(
+                                child: Container(
+                                  width: MediaQuery.of(context).size.width,
+                                  child: Text(
+                                    e.description ?? "No details",
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ),
+                              Spacer(),
+                              Text(e.dueDate?.toLocal()?.toCustomString() ?? "")
+                            ],
+                          ),
+                        ));
                   });
             },
           ),
@@ -692,7 +757,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ),
                 ],
               )).then((value) {
-        if (value) {
+        if (value != null && value) {
           projectBloc.deleteProject(p);
         }
       });
