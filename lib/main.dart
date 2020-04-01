@@ -15,6 +15,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     //DBProvider.db.initDatabase();
     return MaterialApp(
+      darkTheme: ThemeData(
+        textTheme: TextTheme(body1: TextStyle(color: Colors.white), body2: TextStyle(color: Colors.white))
+      ),
+      debugShowCheckedModeBanner: false,
       title: 'Kanban',
       theme: ThemeData(
         primarySwatch: Colors.blue,

@@ -11,9 +11,10 @@ class IconPage extends StatefulWidget {
 }
 
 class _IconPageState extends State<IconPage> {
+  final scrollController = ScrollController();
   Map<String, IconData> iconsMap;
   Map<String, IconData> allIconsMap;
-  double height;
+  double height, elevation = 0;
 
   @override
   void initState() {
@@ -23,6 +24,20 @@ class _IconPageState extends State<IconPage> {
         .where((key) => FontAwesomeIconsMap[key] is IconDataDuotone == false)
         .map((key) => MapEntry(key, FontAwesomeIconsMap[key])));
     iconsMap = allIconsMap;
+
+    scrollController.addListener(() {
+      if (this.mounted) {
+        if (scrollController.offset <= 0 && elevation == 8) {
+          setState(() {
+            elevation = 0;
+          });
+        } else if (scrollController.offset > 0 && elevation == 0) {
+          setState(() {
+            elevation = 8;
+          });
+        }
+      }
+    });
   }
 
   @override
@@ -31,6 +46,7 @@ class _IconPageState extends State<IconPage> {
 
     return Scaffold(
         appBar: AppBar(
+          elevation: elevation,
           backgroundColor: Colors.lightBlue,
           title: Text("${iconsMap.length} icon${iconsMap.isEmpty ? '' : 's'}"),
           bottom: PreferredSize(
@@ -39,7 +55,7 @@ class _IconPageState extends State<IconPage> {
                 child: Padding(
                   padding: EdgeInsets.all(12),
                   child: CupertinoTextField(
-                    style: TextStyle(fontSize: 20),
+                    style: TextStyle(fontSize: 20, color: Theme.of(context).textTheme.body1.color),
                     placeholder: "Seaerch for icons",
                     onChanged: (val) {
                       setState(() {
@@ -52,18 +68,8 @@ class _IconPageState extends State<IconPage> {
               )),
               preferredSize: Size.fromHeight(50)),
         ),
-        backgroundColor: Colors.white,
-        body: Container(
-          height: height,
-          child: GridView.count(
-              crossAxisCount: 8,
-              children: List.generate(iconsMap.length, (index) {
-                return IconButton(
-                  icon: Icon(iconsMap.values.elementAt(index)),
-                  onPressed: () => onIconTapped(iconsMap.keys.elementAt(index)),
-                );
-              })),
-        ));
+        backgroundColor: Colors.lightBlue,
+        body: Container(height: height, child: IconGridView(scrollController: scrollController, iconsMap: iconsMap, onIconTapped: onIconTapped)));
   }
 
   void onIconTapped(String iconString) {
@@ -93,5 +99,26 @@ class _IconPageState extends State<IconPage> {
         );
       },
     );
+  }
+}
+
+class IconGridView extends StatelessWidget {
+  final Map<String, IconData> iconsMap;
+  final ValueChanged<String> onIconTapped;
+  final ScrollController scrollController;
+
+  IconGridView({this.scrollController, this.iconsMap, this.onIconTapped}) : assert(iconsMap != null);
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+        controller: scrollController,
+        crossAxisCount: 8,
+        children: iconsMap.keys
+            .map((key) => IconButton(
+                  icon: Icon(iconsMap[key], color: Colors.white),
+                  onPressed: () => onIconTapped(key),
+                ))
+            .toList());
   }
 }

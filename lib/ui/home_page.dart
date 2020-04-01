@@ -400,6 +400,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                         children: <Widget>[
                                           SizedBox(height: 12),
                                           CupertinoTextField(
+                                            style: Theme.of(context).textTheme.body1,
                                             controller: nameEditingController,
                                           )
                                         ],
