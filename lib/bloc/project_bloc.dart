@@ -99,15 +99,15 @@ class ProjectBloc {
   }
 
   void updateProject(Project project) {
-    if (_isKanban) {
-      _kanban = project;
-      _currentProject = _kanban;
-      repo.setMyKanban(project);
-    } else {
-      print("upate the project the name now is ${project.name}");
-      repo.updateProject(project);
-      _projectsFetcher.sink.add(_allProjects);
-    }
+//    if (_isKanban) {
+//      _kanban = project;
+//      _currentProject = _kanban;
+//      repo.setMyKanban(project);
+//    } else {
+    print("upate the project the name now is ${project.name}");
+    repo.updateProject(project);
+    _projectsFetcher.sink.add(_allProjects);
+    //}
   }
 
   void changeNameById(String name, String uid) {

@@ -16,14 +16,10 @@ class MyApp extends StatelessWidget {
     //DBProvider.db.initDatabase();
     return MaterialApp(
       darkTheme: ThemeData(
-        textTheme: TextTheme(body1: TextStyle(color: Colors.white), body2: TextStyle(color: Colors.white))
-      ),
+          canvasColor: Colors.transparent, textTheme: TextTheme(body1: TextStyle(color: Colors.white), body2: TextStyle(color: Colors.white))),
       debugShowCheckedModeBanner: false,
       title: 'Kanban',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        canvasColor: Colors.transparent
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, canvasColor: Colors.transparent),
       routes: {"/home_page": (_) => HomePageWrapper()},
       home: HomePageWrapper(),
     );

@@ -326,7 +326,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       direction: Axis.vertical,
                       children: <Widget>[
                         Container(
-                          color: widget.isKanban ? appBarColor : Colors.white,
+                          color: widget.isKanban ? appBarColor : Colors.transparent,
                           child: ListTile(
                             leading: Icon(FontAwesomeIcons.gameBoardAlt, color: widget.isKanban ? Colors.white : Colors.black54),
                             title: Text(
@@ -353,6 +353,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   title: Text(
                                 "Projects",
                                 textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.black),
                               )),
                               flex: 1,
                             ),
@@ -628,6 +629,34 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   isScrollControlled: true,
                   context: context,
                   builder: (_) {
+                    if (e.description == null || e.description.isEmpty) {
+                      return Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                            color: Colors.white,
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(12),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text(
+                                  e.title,
+                                  style: TextStyle(fontSize: 20, color: Colors.black),
+                                ),
+                                Spacer(),
+                                Text(e.dueDate == null ? "" : "Due by ${e.dueDate.toLocal().toCustomString()}",
+                                    style: TextStyle(color: Colors.black54)),
+                                Divider(),
+                                Text(e.createdDate == null ? "" : "Created on ${e.createdDate.toLocal().toCustomString()}",
+                                    style: TextStyle(color: Colors.black54)),
+                                SizedBox(height: 12)
+                              ],
+                            ),
+                          ));
+                    }
+
                     return Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
@@ -647,24 +676,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   children: <Widget>[
                                     Text(
                                       e.title,
-                                      style: TextStyle(fontSize: 20),
+                                      style: TextStyle(fontSize: 20, color: Colors.black),
                                     ),
-                                    SizedBox(
-                                      height: 12,
-                                    ),
+                                    Divider(),
                                     Flexible(
                                       child: Container(
                                         width: MediaQuery.of(context).size.width,
                                         child: Text(
-                                          e.description ?? "No details",
-                                          style: TextStyle(fontSize: 16),
+                                          e.description ?? "",
+                                          style: TextStyle(fontSize: 16, color: Colors.black),
                                         ),
                                       ),
                                     ),
                                     SizedBox(
                                       height: 12,
                                     ),
-                                    Text(e.dueDate == null ? "" : "Due by ${e.dueDate.toLocal().toCustomString()}")
+                                    if (e.dueDate != null) Divider(),
+                                    Text(e.dueDate == null ? "" : "Due by ${e.dueDate.toLocal().toCustomString()}",
+                                        style: TextStyle(color: Colors.black54)),
+                                    Divider(),
+                                    Text(e.createdDate == null ? "" : "Created on ${e.createdDate.toLocal().toCustomString()}",
+                                        style: TextStyle(color: Colors.black54))
                                   ],
                                 ),
                               ));
@@ -752,6 +784,74 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void onProjectListTileLongPressed(Project p) => showCupertinoModalPopup<bool>(
+      context: context,
+      builder: (BuildContext context) => CupertinoActionSheet(
+            cancelButton: CupertinoActionSheetAction(
+              isDefaultAction: true,
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+            ),
+            actions: <Widget>[
+              CupertinoActionSheetAction(
+                isDestructiveAction: false,
+                child: Text('Edit Name'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  showDialog<bool>(
+                    context: context,
+                    builder: (context) {
+                      nameEditingController.text = p.name;
+                      return CupertinoAlertDialog(
+                        content: Flex(
+                          direction: Axis.vertical,
+                          children: <Widget>[
+                            SizedBox(height: 12),
+                            CupertinoTextField(
+                              style: Theme.of(context).textTheme.body1,
+                              controller: nameEditingController,
+                            )
+                          ],
+                        ),
+                        actions: <Widget>[
+                          CupertinoActionSheetAction(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: Text("Cancel")),
+                          CupertinoActionSheetAction(
+                              onPressed: () {
+                                var name = nameEditingController.text;
+                                if (name.isNotEmpty) {
+                                  nameEditingController.clear();
+                                  scaffoldKey.currentState.closeDrawer();
+                                  Navigator.pop(context);
+                                  p.name = name;
+                                  print(p.name);
+                                  projectBloc.updateProject(p);
+                                }
+                              },
+                              child: Text("Confirm"),
+                              isDefaultAction: true),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+              CupertinoActionSheetAction(
+                isDestructiveAction: true,
+                child: Text('Remove ${p.name}'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  onRemoveTapped(p);
+                },
+              ),
+            ],
+          ));
+
+  void onRemoveTapped(Project p) => showCupertinoModalPopup<bool>(
           context: context,
           builder: (BuildContext context) => CupertinoActionSheet(
                 message: Text("Are you sure?"),
@@ -763,49 +863,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   },
                 ),
                 actions: <Widget>[
-                  CupertinoActionSheetAction(
-                    isDestructiveAction: false,
-                    child: Text('Edit Name'),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      showDialog<bool>(
-                        context: context,
-                        builder: (context) {
-                          return CupertinoAlertDialog(
-                            content: Flex(
-                              direction: Axis.vertical,
-                              children: <Widget>[
-                                SizedBox(height: 12),
-                                CupertinoTextField(
-                                  controller: nameEditingController,
-                                )
-                              ],
-                            ),
-                            actions: <Widget>[
-                              CupertinoActionSheetAction(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                  },
-                                  child: Text("Cancel")),
-                              CupertinoActionSheetAction(
-                                  onPressed: () {
-                                    var name = nameEditingController.text;
-                                    if (name.isNotEmpty) {
-                                      nameEditingController.clear();
-                                      scaffoldKey.currentState.closeDrawer();
-                                      Navigator.pop(context);
-                                      p.name = name;
-                                      projectBloc.updateProject(p);
-                                    }
-                                  },
-                                  child: Text("Confirm"),
-                                  isDefaultAction: true),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                  ),
                   CupertinoActionSheetAction(
                     isDestructiveAction: true,
                     child: Text('Remove ${p.name}'),
