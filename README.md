@@ -1,4 +1,4 @@
-# kanban
+# Kaby
 
 A kanban application.
 
