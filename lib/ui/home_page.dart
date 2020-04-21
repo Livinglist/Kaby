@@ -29,11 +29,13 @@ class _HomePageWrapperState extends State<HomePageWrapper> {
 
     super.initState();
 
-    AppReview.isRequestReviewAvailable.then((available) {
-      if (available) {
-        AppReview.requestReview;
-      }
-    });
+    if (Random(DateTime.now().millisecondsSinceEpoch).nextBool()) {
+      AppReview.isRequestReviewAvailable.then((isAvailable) {
+        if (isAvailable) {
+          AppReview.requestReview;
+        }
+      });
+    }
   }
 
   @override
