@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' hide Scaffold, ScaffoldState;
 import 'package:flutter/cupertino.dart';
 import 'package:app_review/app_review.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:kanban/bloc/task_bloc.dart';
 
 import 'package:kanban/models/project.dart';
 import 'package:kanban/models/task.dart';
@@ -280,6 +281,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           },
         ),
         actions: <Widget>[
+          AnimatedBuilder(
+            animation: iconAnimationController,
+            builder: (_, __) {
+              return Opacity(
+                  opacity: iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value,
+                  child: IconButton(
+                    icon: Icon(Icons.delete_sweep),
+                    onPressed: () => showRemoveAllDialog(),
+                  ));
+            },
+          ),
           if (widget.isKanban == false)
             AnimatedBuilder(
               animation: iconAnimationController,
@@ -287,7 +299,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 return Opacity(
                     opacity: iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value,
                     child: IconButton(
-                      icon: Icon(FontAwesomeIconsMap[widget.project.icon]),
+                      icon: Icon(FontAwesomeIconsMap[widget.project.icon], size: 18),
                       onPressed: () {
                         if (iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value != 0)
                           Navigator.push(context, MaterialPageRoute(builder: (_) => IconPage()));
@@ -890,4 +902,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               scaffoldKey.currentState.hideCurrentSnackBar();
             })));
   }
+
+  void showRemoveAllDialog() => showCupertinoDialog(
+      context: context,
+      builder: (_) {
+        return CupertinoAlertDialog(
+          title: Text("Remove all tasks"),
+          actions: <Widget>[
+            CupertinoActionSheetAction(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text("Cancel"),
+                isDefaultAction: true),
+            CupertinoActionSheetAction(
+                onPressed: () {
+                  projectBloc.removeAllTasks();
+                  Navigator.pop(context);
+                },
+                child: Text("Confirm"),
+                isDestructiveAction: true),
+          ],
+        );
+      });
 }

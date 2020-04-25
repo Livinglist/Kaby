@@ -138,6 +138,17 @@ class ProjectBloc {
     }
   }
 
+  void removeAllTasks() {
+    _currentProject.tasks.clear();
+    _currentProjectFetcher.sink.add(_currentProject);
+
+    if (_isKanban) {
+      repo.setMyKanban(_currentProject);
+    } else {
+      repo.updateProject(_currentProject);
+    }
+  }
+
   void updateCurrent() {
     _currentProjectFetcher.sink.add(_currentProject);
 
