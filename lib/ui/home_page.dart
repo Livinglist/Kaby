@@ -4,14 +4,10 @@ import 'package:flutter/material.dart' hide Scaffold, ScaffoldState;
 import 'package:flutter/cupertino.dart';
 import 'package:app_review/app_review.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:kanban/bloc/task_bloc.dart';
 
 import 'package:kanban/models/project.dart';
 import 'package:kanban/models/task.dart';
-import 'components/task_tile.dart';
-import 'package:kanban/utils/list_extension.dart';
 import 'components/custom_dismissable.dart' as Custom;
-import 'components/custom_drawer.dart' as CustomDrawer;
 import 'task_create_page.dart';
 import 'package:kanban/bloc/project_bloc.dart';
 import 'components/custom_scaffold.dart';

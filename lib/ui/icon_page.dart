@@ -6,7 +6,7 @@ import 'package:kanban/bloc/project_bloc.dart';
 import 'package:kanban/models/project.dart';
 
 class IconPage extends StatefulWidget {
-  Project project;
+  final Project project;
 
   IconPage({@required this.project});
 

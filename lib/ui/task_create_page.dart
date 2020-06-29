@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
-import 'package:vibration/vibration.dart';
-
 import 'package:kanban/bloc/project_bloc.dart';
 import 'package:kanban/models/task.dart';
 
@@ -21,19 +19,12 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
   DateTime dueDate = DateTime.now().add(Duration(hours: 24 - DateTime.now().hour));
 
   bool hasDueDate = false;
-  bool shouldVibrate = false;
 
   Task task;
 
   @override
   void initState() {
     super.initState();
-
-    Vibration.hasCustomVibrationsSupport().then((hasCoreHaptics) {
-      setState(() {
-        shouldVibrate = hasCoreHaptics;
-      });
-    });
   }
 
   @override
@@ -134,9 +125,6 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                           initialDateTime: dueDate,
                           onDateTimeChanged: (DateTime dateTime) {
                             dueDate = dateTime;
-                            if (shouldVibrate) {
-                              Vibration.vibrate(duration: 200, amplitude: 64);
-                            }
                           },
                           mode: CupertinoDatePickerMode.dateAndTime),
                     ))
