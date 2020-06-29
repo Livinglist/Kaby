@@ -268,7 +268,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: appBarColor,
-        title: Text(appBarTitle),
+        title: Column(
+          children: <Widget>[
+            Text(widget.project.name, maxLines: 1),
+            Text(appBarTitle, style: TextStyle(fontSize: 8)),
+          ],
+        ),
         elevation: 8,
         leading: IconButton(
           icon: AnimatedIcon(progress: iconAnimationController.drive(Tween<double>(begin: 0.0, end: 1.0)), icon: AnimatedIcons.menu_arrow),
@@ -292,21 +297,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ));
             },
           ),
-          if (widget.isKanban == false)
-            AnimatedBuilder(
-              animation: iconAnimationController,
-              builder: (_, __) {
-                return Opacity(
-                    opacity: iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value,
-                    child: IconButton(
-                      icon: Icon(FontAwesomeIconsMap[widget.project.icon], size: 18),
-                      onPressed: () {
-                        if (iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value != 0)
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => IconPage()));
-                      },
-                    ));
-              },
-            ),
           //If there is no task, show the bottom on the center of the screen.
           if (task.isNotEmpty)
             AnimatedBuilder(
@@ -392,6 +382,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     color: (widget.project.id == p.id && widget.isKanban == false) ? Colors.white : Colors.black,
                                   ),
                                 ),
+                                subtitle:
+                                    Text("${p.tasks.where((t) => t.isDone).toList().length}/${p.tasks.length}"),
                                 onTap: () {
                                   scaffoldKey.currentState.closeDrawer();
                                   projectBloc.getProjectById(p.uid);
@@ -433,7 +425,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                                 nameEditingController.clear();
                                                 scaffoldKey.currentState.closeDrawer();
                                                 Navigator.pop(context);
-                                                projectBloc.createProject(name);
+                                                String uid = projectBloc.createProject(name);
+                                                projectBloc.getProjectById(uid);
                                               }
                                             },
                                             child: Text("Confirm"),
@@ -855,6 +848,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 },
               ),
               CupertinoActionSheetAction(
+                child: Text('Change Icon'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => IconPage(project: p)));
+                },
+              ),
+              CupertinoActionSheetAction(
                 isDestructiveAction: true,
                 child: Text('Remove ${p.name}'),
                 onPressed: () {
@@ -903,18 +904,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             })));
   }
 
-  void showRemoveAllDialog() => showCupertinoDialog(
+  void showRemoveAllDialog() => showCupertinoModalPopup(
       context: context,
       builder: (_) {
-        return CupertinoAlertDialog(
-          title: Text("Remove all tasks"),
+        return CupertinoActionSheet(
+          message: Text("Remove all tasks"),
+          cancelButton: CupertinoActionSheetAction(
+            isDefaultAction: true,
+            child: Text('Cancel'),
+            onPressed: () {
+              Navigator.pop(context, false);
+            },
+          ),
           actions: <Widget>[
-            CupertinoActionSheetAction(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text("Cancel"),
-                isDefaultAction: true),
             CupertinoActionSheetAction(
                 onPressed: () {
                   projectBloc.removeAllTasks();

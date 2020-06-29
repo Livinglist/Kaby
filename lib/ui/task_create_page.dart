@@ -56,6 +56,7 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
               Padding(
                 padding: EdgeInsets.all(12),
                 child: TextFormField(
+                  style: TextStyle(fontSize: 20),
                   maxLength: 50,
                   maxLengthEnforced: false,
                   controller: titleController,
@@ -104,23 +105,25 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                   ],
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.all(12),
-                child: Text("Due Date"),
-              ),
-              Padding(
+              if (hasDueDate)
+                Padding(
                   padding: EdgeInsets.all(12),
-                  child: Container(
-                    height: 300,
-                    width: MediaQuery.of(context).size.width,
-                    child: CupertinoDatePicker(
-                        use24hFormat: true,
-                        initialDateTime: dueDate,
-                        onDateTimeChanged: (DateTime dateTime) {
-                          dueDate = dateTime;
-                        },
-                        mode: CupertinoDatePickerMode.dateAndTime),
-                  ))
+                  child: Text("Due Date"),
+                ),
+              if (hasDueDate)
+                Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Container(
+                      height: 300,
+                      width: MediaQuery.of(context).size.width,
+                      child: CupertinoDatePicker(
+                          use24hFormat: true,
+                          initialDateTime: dueDate,
+                          onDateTimeChanged: (DateTime dateTime) {
+                            dueDate = dateTime;
+                          },
+                          mode: CupertinoDatePickerMode.dateAndTime),
+                    ))
             ],
           ),
         ),

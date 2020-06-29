@@ -66,12 +66,16 @@ class ProjectBloc {
     _currentProjectFetcher.sink.add(_currentProject);
   }
 
-  void createProject(String name) {
-    _currentProject = Project.create(name: name);
-    repo.addProject(_currentProject);
-    _allProjects.add(_currentProject);
-    _currentProjectFetcher.sink.add(_currentProject);
-    _projectsFetcher.sink.add(_allProjects);
+  String createProject(String name) {
+//    _currentProject = Project.create(name: name);
+//    repo.addProject(_currentProject);
+//    _allProjects.add(_currentProject);
+//    _currentProjectFetcher.sink.add(_currentProject);
+//    _projectsFetcher.sink.add(_allProjects);
+    var project = Project.create(name: name);
+    repo.addProject(project);
+    _allProjects.add(project);
+    return project.uid;
   }
 
   void deleteProject(Project project) {
@@ -87,27 +91,24 @@ class ProjectBloc {
     repo.deleteProject(project);
   }
 
-  void updateIcon(String iconString) {
-    if (_isKanban) {
-      throw (Exception("Exception:\n\tIcon of 'My Kanban' should not be customizable"));
-    } else {
-      _currentProject.icon = iconString;
-      repo.updateProject(_currentProject);
-      _currentProjectFetcher.sink.add(_currentProject);
-      _projectsFetcher.sink.add(_allProjects);
-    }
+  void updateIcon(Project project, String iconString) {
+//    if (_isKanban) {
+//      throw (Exception("Exception:\n\tIcon of 'My Kanban' should not be customizable"));
+//    } else {
+    project.icon = iconString;
+    //_currentProject.icon = iconString;
+    repo.updateProject(project);
+    _currentProjectFetcher.sink.add(_currentProject);
+    _projectsFetcher.sink.add(_allProjects);
+    //}
   }
 
   void updateProject(Project project) {
-//    if (_isKanban) {
-//      _kanban = project;
-//      _currentProject = _kanban;
-//      repo.setMyKanban(project);
-//    } else {
     print("upate the project the name now is ${project.name}");
     repo.updateProject(project);
     _projectsFetcher.sink.add(_allProjects);
-    //}
+    if(project.uid == currentProjectInstance.uid)
+      _currentProjectFetcher.sink.add(project);
   }
 
   void changeNameById(String name, String uid) {
@@ -157,6 +158,8 @@ class ProjectBloc {
     } else {
       repo.updateProject(_currentProject);
     }
+
+    //_projectsFetcher.sink.add(_allProjects);
   }
 
   void dispose() {

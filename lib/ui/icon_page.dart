@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import 'package:kanban/bloc/project_bloc.dart';
-import 'package:kanban/utils/list_extension.dart';
+import 'package:kanban/models/project.dart';
 
 class IconPage extends StatefulWidget {
+  Project project;
+
+  IconPage({@required this.project});
+
   @override
   _IconPageState createState() => _IconPageState();
 }
@@ -77,7 +81,7 @@ class _IconPageState extends State<IconPage> {
       context: context,
       builder: (context) {
         return CupertinoAlertDialog(
-          title: Text('Use this icon for \n${projectBloc.currentProjectInstance.name}?'),
+          title: Text('Use this icon for \n${widget.project.name}?'),
           content: Flex(
             direction: Axis.vertical,
             children: <Widget>[SizedBox(height: 24), Transform.scale(scale: 2, child: Icon(FontAwesomeIconsMap[iconString])), SizedBox(height: 24)],
@@ -90,7 +94,7 @@ class _IconPageState extends State<IconPage> {
                 child: Text("Cancel")),
             CupertinoActionSheetAction(
                 onPressed: () {
-                  projectBloc.updateIcon(iconString);
+                  projectBloc.updateIcon(widget.project, iconString);
                   Navigator.pop(context);
                 },
                 child: Text("Confirm"),

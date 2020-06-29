@@ -25,6 +25,10 @@ class Task {
   DateTime dueDate;
   TaskStatus status = TaskStatus.todo;
 
+  bool get isDone => status == TaskStatus.done;
+  bool get isDoing => status == TaskStatus.doing;
+  bool get isTodo => status == TaskStatus.todo;
+
   Task({this.title, this.description, this.createdDate, this.finishedDate, this.dueDate, this.status});
 
   Task.create({this.title, this.description, DateTime dueDate})
