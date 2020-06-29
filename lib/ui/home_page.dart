@@ -271,7 +271,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         title: Column(
           children: <Widget>[
             Text(widget.project.name, maxLines: 1),
-            Text(appBarTitle, style: TextStyle(fontSize: 8)),
+            Text(appBarTitle, style: TextStyle(fontSize: 10)),
           ],
         ),
         elevation: 8,
