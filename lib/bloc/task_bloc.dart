@@ -1,6 +1,5 @@
 import 'package:rxdart/rxdart.dart';
 
-import 'package:kanban/resources/repository.dart';
 import 'package:kanban/models/task.dart';
 
 class TaskBloc {

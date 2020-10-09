@@ -10,8 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/gestures.dart' show DragStartBehavior;
-import 'package:flutter/material.dart'
-    hide Scaffold, Drawer;
+import 'package:flutter/material.dart' hide Scaffold, Drawer;
 import 'custom_drawer.dart' as Custom hide DrawerAlignment;
 
 // Examples can assume:
@@ -410,12 +409,14 @@ class _ScaffoldLayout extends MultiChildLayoutDelegate {
         scaffoldSize: size,
         snackBarSize: snackBarSize,
         textDirection: textDirection,
+        minViewPadding: EdgeInsets.all(0),
       );
-      final Offset currentFabOffset = currentFloatingActionButtonLocation.getOffset(currentGeometry);
+      //final Offset currentFabOffset = currentFloatingActionButtonLocation.getOffset(currentGeometry);
       final Offset previousFabOffset = previousFloatingActionButtonLocation.getOffset(currentGeometry);
       final Offset fabOffset = floatingActionButtonMotionAnimator.getOffset(
         begin: previousFabOffset,
-        end: currentFabOffset,
+        //end: currentFabOffset,
+        end: Offset(0, 0),
         progress: floatingActionButtonMoveAnimationProgress,
       );
       positionChild(_ScaffoldSlot.floatingActionButton, fabOffset);

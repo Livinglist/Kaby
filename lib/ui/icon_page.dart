@@ -59,7 +59,7 @@ class _IconPageState extends State<IconPage> {
                 child: Padding(
                   padding: EdgeInsets.all(12),
                   child: CupertinoTextField(
-                    style: TextStyle(fontSize: 20, color: Theme.of(context).textTheme.body1.color),
+                    style: TextStyle(fontSize: 20, color: Theme.of(context).textTheme.bodyText2.color),
                     placeholder: "Seaerch for icons",
                     onChanged: (val) {
                       setState(() {

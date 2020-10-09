@@ -1,5 +1,4 @@
 import 'package:kanban/resources/db_provider.dart';
-import 'package:kanban/resources/shared_prefs_provider.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'package:kanban/resources/repository.dart';
@@ -24,13 +23,10 @@ class ProjectBloc {
 
   List<Project> get allProjectList => _allProjects;
   Project get currentProjectInstance => _currentProject;
-  //bool get isKanban => _isKanban;
 
   void fetchAllProjects() async {
     var allProjects = await repo.getAllProjects();
     var kanban = await repo.getMyKanban();
-
-    print(kanban);
 
     _kanban = kanban;
     _allProjects = allProjects;
@@ -67,11 +63,6 @@ class ProjectBloc {
   }
 
   String createProject(String name) {
-//    _currentProject = Project.create(name: name);
-//    repo.addProject(_currentProject);
-//    _allProjects.add(_currentProject);
-//    _currentProjectFetcher.sink.add(_currentProject);
-//    _projectsFetcher.sink.add(_allProjects);
     var project = Project.create(name: name);
     repo.addProject(project);
     _allProjects.add(project);
@@ -92,11 +83,7 @@ class ProjectBloc {
   }
 
   void updateIcon(Project project, String iconString) {
-//    if (_isKanban) {
-//      throw (Exception("Exception:\n\tIcon of 'My Kanban' should not be customizable"));
-//    } else {
     project.icon = iconString;
-    //_currentProject.icon = iconString;
     repo.updateProject(project);
     _currentProjectFetcher.sink.add(_currentProject);
     _projectsFetcher.sink.add(_allProjects);
@@ -107,8 +94,7 @@ class ProjectBloc {
     print("upate the project the name now is ${project.name}");
     repo.updateProject(project);
     _projectsFetcher.sink.add(_allProjects);
-    if(project.uid == currentProjectInstance.uid)
-      _currentProjectFetcher.sink.add(project);
+    if (project.uid == currentProjectInstance.uid) _currentProjectFetcher.sink.add(project);
   }
 
   void changeNameById(String name, String uid) {

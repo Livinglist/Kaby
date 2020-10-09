@@ -28,6 +28,7 @@ dependencies:
     path: ./font_awesome_flutter/
   app_review: 1.1.0+1
   dynamic_theme: 1.0.1
+  snapping_sheet: 2.0.1
 
 
   # The following adds the Cupertino Icons font to your application.

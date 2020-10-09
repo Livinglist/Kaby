@@ -30,7 +30,7 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.lightBlue,
       appBar: AppBar(
         backgroundColor: Colors.lightBlue,
         elevation: 8,
@@ -58,24 +58,40 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
           child: Column(
             children: <Widget>[
               Padding(
-                padding: EdgeInsets.all(12),
-                child: TextFormField(
-                  style: TextStyle(fontSize: 20),
-                  maxLength: 50,
-                  maxLengthEnforced: false,
-                  controller: titleController,
-                  decoration: InputDecoration(hintText: "Title", labelText: "Title"),
-                  validator: (String value) {
-                    if (value.trim().isEmpty) {
-                      return "Title cannot be empty.";
-                    }
-                    if (value.trim().length > 50) {
-                      return "Title cannot be more than 50 characters.";
-                    }
-                    return null;
-                  },
-                ),
-              ),
+                  padding: EdgeInsets.all(12),
+                  child: Container(
+                    decoration: BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(24))),
+                    child: TextFormField(
+                      style: TextStyle(fontSize: 16),
+                      maxLength: 50,
+                      maxLengthEnforced: false,
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        hintText: "Title",
+                        labelText: "Title",
+                        fillColor: Colors.white,
+                        filled: true,
+                        floatingLabelBehavior: FloatingLabelBehavior.never,
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      validator: (String value) {
+                        if (value.trim().isEmpty) {
+                          return "Title cannot be empty.";
+                        }
+                        if (value.trim().length > 50) {
+                          return "Title cannot be more than 50 characters.";
+                        }
+                        return null;
+                      },
+                    ),
+                  )),
               Padding(
                 padding: EdgeInsets.all(12),
                 child: TextFormField(
@@ -83,7 +99,21 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                   maxLengthEnforced: false,
                   maxLines: 6,
                   controller: descriptionController,
-                  decoration: InputDecoration(hintText: "Description", labelText: "Description"),
+                  decoration: InputDecoration(
+                    hintText: "Description",
+                    labelText: "Description",
+                    fillColor: Colors.white,
+                    filled: true,
+                    floatingLabelBehavior: FloatingLabelBehavior.never,
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                   validator: (String value) {
                     if (value == null || value.isEmpty) return null;
                     if (value.trim().length > 300) {
@@ -109,16 +139,16 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                   ],
                 ),
               ),
-              if (hasDueDate)
-                Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text("Due Date"),
-                ),
+//              if (hasDueDate)
+//                Padding(
+//                  padding: EdgeInsets.all(12),
+//                  child: Text("Due Date"),
+//                ),
               if (hasDueDate)
                 Padding(
                     padding: EdgeInsets.all(12),
                     child: Container(
-                      height: 300,
+                      height: 200,
                       width: MediaQuery.of(context).size.width,
                       child: CupertinoDatePicker(
                           use24hFormat: true,
