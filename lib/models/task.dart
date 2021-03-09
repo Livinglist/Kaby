@@ -1,4 +1,7 @@
+import 'package:uuid/uuid.dart';
+
 const String idKey = "id";
+const String uidKey = "uid";
 const String titleKey = "title";
 const String descriptionKey = "description";
 const String createdDateKey = "createdDate";
@@ -8,9 +11,11 @@ const String statusKey = "status";
 
 enum TaskStatus { todo, doing, done, aborted }
 
-class Task {
+class Task extends Comparable{
   ///Used for SQLite.
   int id;
+
+  String uid;
 
   String title;
   String description;
@@ -33,10 +38,11 @@ class Task {
 
   Task.create({this.title, this.description, DateTime dueDate})
       : this.dueDate = dueDate?.toUtc() ?? null,
-        this.createdDate = DateTime.now().toUtc();
+        this.createdDate = DateTime.now().toUtc(), this.uid = Uuid().v1();
 
   Task.fromMap(Map map) : this.createdDate = map[createdDateKey] == "null" ? null : DateTime.parse(map[createdDateKey]) {
     this.id = map[idKey];
+    this.uid = map[uidKey];
     this.title = map[titleKey];
     this.description = map[descriptionKey];
     this.finishedDate = map[finishedDateKey] == "null" ? null : DateTime.parse(map[finishedDateKey]);
@@ -47,6 +53,7 @@ class Task {
 
   Map toMap() => {
         idKey: this.id,
+        uidKey: this.uid,
         titleKey: this.title,
         descriptionKey: this.description,
         createdDateKey: this.createdDate.toString(),
@@ -58,5 +65,11 @@ class Task {
   @override
   String toString() {
     return "Task: $status, $title";
+  }
+
+  @override
+  int compareTo(other) {
+    if(this.uid == other.uid) return 0;
+    return 1;
   }
 }

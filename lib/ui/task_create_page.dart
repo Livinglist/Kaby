@@ -60,7 +60,6 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
               Padding(
                   padding: EdgeInsets.all(12),
                   child: Container(
-                    decoration: BoxDecoration(borderRadius: BorderRadius.all(Radius.circular(24))),
                     child: TextFormField(
                       style: TextStyle(fontSize: 16),
                       maxLength: 50,
@@ -72,14 +71,6 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                         fillColor: Colors.white,
                         filled: true,
                         floatingLabelBehavior: FloatingLabelBehavior.never,
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
                       ),
                       validator: (String value) {
                         if (value.trim().isEmpty) {
@@ -105,14 +96,6 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                     fillColor: Colors.white,
                     filled: true,
                     floatingLabelBehavior: FloatingLabelBehavior.never,
-                    border: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
                   ),
                   validator: (String value) {
                     if (value == null || value.isEmpty) return null;
@@ -127,9 +110,9 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                 padding: EdgeInsets.all(12),
                 child: Row(
                   children: <Widget>[
-                    Text("Has Due Date"),
+                    Text("Has Due Date", style: TextStyle(color: Colors.black)),
                     Spacer(),
-                    CupertinoSwitch(
+                    Switch(
                         value: hasDueDate,
                         onChanged: (val) {
                           setState(() {
@@ -139,24 +122,20 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                   ],
                 ),
               ),
-//              if (hasDueDate)
-//                Padding(
-//                  padding: EdgeInsets.all(12),
-//                  child: Text("Due Date"),
-//                ),
               if (hasDueDate)
                 Padding(
                     padding: EdgeInsets.all(12),
                     child: Container(
-                      height: 200,
+                      height: 300,
                       width: MediaQuery.of(context).size.width,
-                      child: CupertinoDatePicker(
-                          use24hFormat: true,
-                          initialDateTime: dueDate,
-                          onDateTimeChanged: (DateTime dateTime) {
+                      child: CalendarDatePicker(
+                          //use24hFormat: true,
+                        firstDate: DateTime.now().add(Duration(hours: 24)),
+                          lastDate: DateTime.now().add(Duration(days: 365)),
+                          initialDate: dueDate,
+                          onDateChanged: (DateTime dateTime) {
                             dueDate = dateTime;
-                          },
-                          mode: CupertinoDatePickerMode.dateAndTime),
+                          }),
                     ))
             ],
           ),

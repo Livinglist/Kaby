@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:app_review/app_review.dart';
@@ -7,68 +5,13 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import 'package:kanban/models/project.dart';
 import 'package:kanban/models/task.dart';
-import 'components/custom_dismissable.dart' as Custom;
 import 'task_create_page.dart';
 import 'package:kanban/bloc/project_bloc.dart';
 import 'package:kanban/utils/datetime_extension.dart';
 import 'icon_page.dart';
-import 'components/spring_curve.dart';
-
-class HomePageWrapper extends StatefulWidget {
-  @override
-  _HomePageWrapperState createState() => _HomePageWrapperState();
-}
-
-class _HomePageWrapperState extends State<HomePageWrapper> {
-  @override
-  void initState() {
-    projectBloc.fetchAllProjects();
-
-    super.initState();
-
-    if (Random(DateTime.now().millisecondsSinceEpoch).nextBool()) {
-      AppReview.isRequestReviewAvailable.then((isAvailable) {
-        if (isAvailable) {
-          AppReview.requestReview;
-        }
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: projectBloc.currentProject,
-      builder: (_, AsyncSnapshot<Project> snapshot) {
-        if (snapshot.hasData) {
-          return StreamBuilder(
-            stream: projectBloc.isKanban,
-            builder: (_, AsyncSnapshot<bool> isKanbanSnapshot) {
-              return HomePage(
-                key: UniqueKey(),
-                project: snapshot.data,
-                isKanban: isKanbanSnapshot.data ?? true,
-              );
-            },
-          );
-        } else {
-          return Container();
-        }
-      },
-    );
-  }
-}
-
-enum InteractingStatus { delete, move }
 
 class HomePage extends StatefulWidget {
-  final Project project;
-  final List<Task> allTasks;
-  final bool isKanban;
-
-  HomePage({this.project, this.isKanban, Key key})
-      : allTasks = project.tasks,
-        super(key: key);
+  HomePage();
 
   @override
   _HomePageState createState() => _HomePageState();
@@ -77,638 +20,283 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final nameEditingController = TextEditingController();
-  Map<Task, GlobalKey<Custom.CustomDismissibleState>> dismissibleKeys;
-
-  InteractingStatus interactingStatus = InteractingStatus.move;
-
-  double initialTodoHeight, todoHeight, initialDoingHeight, doingHeight, initialDoneHeight, doneHeight;
-
-  AnimationController drawerAnimationController;
-  AnimationController animationController;
-  AnimationController iconAnimationController;
-
-  ///The task that is being interacted with.
-  Task currentTask;
-
-  List<Task> task, todoTask = [], doingTask = [], doneTask = [];
-  double height;
 
   @override
   void initState() {
+    projectBloc.fetchAllProjects();
+
     super.initState();
-
-    print("initState");
-
-    drawerAnimationController = AnimationController(vsync: this, duration: Duration(milliseconds: 250));
-
-    iconAnimationController = AnimationController(vsync: this, lowerBound: 0.0, upperBound: 1.0, duration: Duration(microseconds: 300));
-
-//    WidgetsBinding.instance.addPostFrameCallback((_) {
-//      this.task = widget.allTasks;
-//      todoTask = task.where((e) => e.status == TaskStatus.todo).toList();
-//      doingTask = task.where((e) => e.status == TaskStatus.doing).toList();
-//      doneTask = task.where((e) => e.status == TaskStatus.done).toList();
-//
-//      for (var task in dismissibleKeys.keys) {
-//        var dismissibleKey = dismissibleKeys[task];
-//
-//        dismissibleKey.currentState.moveController.addListener(() {
-//          setState(() {
-//            //Delete task.
-//            if (dismissibleKey.currentState.dismissDirection == Custom.DismissDirection.endToStart) {
-//              currentTask = task;
-//              interactingStatus = InteractingStatus.delete;
-//            }
-//            //Moving task to next section.
-//            else if (dismissibleKey.currentState.dismissDirection == Custom.DismissDirection.startToEnd) {
-//              currentTask = task;
-//              interactingStatus = InteractingStatus.move;
-//            }
-//          });
-//
-//          double val = dismissibleKey.currentState.moveController.value;
-//
-//          animationController.value = -1 + val;
-//
-//          if (animationController.value == 1) {
-//            animationController.value = -1.0;
-//          }
-//        });
-//      }
-//    });
-
-    task = widget.allTasks;
-
-    todoTask.addAll(task.where((e) => e.status == TaskStatus.todo));
-    doingTask.addAll(task.where((e) => e.status == TaskStatus.doing));
-    doneTask.addAll(task.where((e) => e.status == TaskStatus.done));
-
-    dismissibleKeys = Map.fromEntries(task.map((task) => MapEntry(task, GlobalKey<Custom.CustomDismissibleState>(debugLabel: task.title))));
-
-    animationController = AnimationController(vsync: this, lowerBound: -1.0, upperBound: 1.0, duration: Duration(microseconds: 300));
   }
 
   @override
   void dispose() {
-    this.animationController.dispose();
-    this.iconAnimationController.dispose();
     super.dispose();
   }
 
-  double unit;
-  void computeHeight() {
-    var allTasks = [...todoTask, ...doingTask, ...doneTask];
-    double todoPortion = todoTask.length / allTasks.length;
-    double doingPortion = doingTask.length / allTasks.length;
-    double donePortion = doneTask.length / allTasks.length;
-
-    height = MediaQuery.of(context).size.height; //- AppBar().preferredSize.height;
-
-    todoHeight = todoPortion * height;
-    doingHeight = doingPortion * height;
-    doneHeight = donePortion * height;
-
-    print(todoHeight);
-    print(doingHeight);
-    print(doneHeight);
-
-    unit = height / allTasks.length;
-  }
-
-  bool computed = false;
-
   @override
   Widget build(BuildContext context) {
-    if (computed == false) {
-      computeHeight();
-      computed = true;
-    }
-
-    this.task = widget.allTasks;
-    todoTask = task.where((e) => e.status == TaskStatus.todo).toList();
-    doingTask = task.where((e) => e.status == TaskStatus.doing).toList();
-    doneTask = task.where((e) => e.status == TaskStatus.done).toList();
-
-    Color appBarColor;
-    String appBarTitle;
-
-    var temp = [...todoTask, ...doingTask, ...doneTask];
-
-    if (temp.isNotEmpty) {
-      switch (temp[0].status) {
-        case TaskStatus.todo:
-          appBarColor = Colors.lightBlue;
-          appBarTitle = "Todo";
-          break;
-        case TaskStatus.doing:
-          appBarColor = Colors.redAccent;
-          appBarTitle = "Doing";
-          break;
-        case TaskStatus.done:
-          appBarColor = Colors.blueAccent;
-          appBarTitle = "Done";
-          break;
-        default:
-      }
-    } else {
-      appBarColor = Colors.lightBlue;
-      appBarTitle = "Empty";
-    }
-
-    //Newly added Task
-    if (task.isNotEmpty && dismissibleKeys.containsKey(task.last) == false) {
-      dismissibleKeys[task.last] = GlobalKey<Custom.CustomDismissibleState>();
-      computeHeight();
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      this.task = widget.allTasks;
-
-      todoTask = task.where((e) => e.status == TaskStatus.todo).toList();
-      doingTask = task.where((e) => e.status == TaskStatus.doing).toList();
-      doneTask = task.where((e) => e.status == TaskStatus.done).toList();
-
-      for (var task in dismissibleKeys.keys) {
-        var dismissibleKey = dismissibleKeys[task];
-
-        dismissibleKey.currentState?.moveController?.addListener(() {
-          setState(() {
-            //Delete task.
-            if (dismissibleKey.currentState.dismissDirection == Custom.DismissDirection.endToStart) {
-              currentTask = task;
-              interactingStatus = InteractingStatus.delete;
-            }
-            //Moving task to next section.
-            else if (dismissibleKey.currentState.dismissDirection == Custom.DismissDirection.startToEnd) {
-              currentTask = task;
-              interactingStatus = InteractingStatus.move;
-            }
-          });
-
-          double val = dismissibleKey.currentState.moveController.value;
-
-          animationController.value = -1 + val;
-
-          if (animationController.value == 1) {
-            animationController.value = -1.0;
-          }
-        });
-      }
-    });
-
-    return Stack(
-      children: [
-        Positioned.fill(child: Container(color: Colors.white)),
-        Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 300,
-            child: Material(
-              child: Container(
-                  color: Colors.white,
-                  width: 300,
-                  child: SafeArea(
-                    child: SingleChildScrollView(
-                        child: StreamBuilder(
-                      stream: projectBloc.allProjects,
-                      builder: (_, AsyncSnapshot<List<Project>> snapshot) {
-                        return Flex(
-                          direction: Axis.vertical,
-                          children: <Widget>[
-                            Container(
-                              color: widget.isKanban ? appBarColor : Colors.transparent,
-                              child: ListTile(
-                                leading: Icon(FontAwesomeIcons.gameBoardAlt, color: widget.isKanban ? Colors.white : Colors.black54),
-                                title: Text(
-                                  "My Kanban",
-                                  style: TextStyle(color: widget.isKanban ? Colors.white : Colors.black),
-                                ),
-                                onTap: () {
-                                  //scaffoldKey.currentState.closeDrawer();
-                                  projectBloc.getKanban();
-                                  //Navigator.pop(context);
-                                },
-                              ),
-                            ),
-                            Container(
-                                child: Flex(
-                              direction: Axis.horizontal,
-                              children: <Widget>[
-                                Flexible(
-                                  child: Divider(),
-                                  flex: 1,
-                                ),
-                                Flexible(
-                                  child: ListTile(
-                                      title: Text(
-                                    "Projects",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(color: Colors.black),
-                                  )),
-                                  flex: 1,
-                                ),
-                                Flexible(
-                                  child: Divider(),
-                                  flex: 1,
-                                )
-                              ],
-                            )),
-                            if (snapshot.hasData)
-                              for (var p in snapshot.data)
-                                Container(
-                                  color: (widget.project.id == p.id && widget.isKanban == false) ? appBarColor : Colors.transparent,
-                                  child: ListTile(
-                                    leading: Icon(
-                                      FontAwesomeIconsMap[p.icon],
-                                      color: (widget.project.id == p.id && widget.isKanban == false) ? Colors.white : Colors.black54,
-                                    ),
-                                    title: Text(
-                                      p.name,
-                                      style: TextStyle(
-                                        color: (widget.project.id == p.id && widget.isKanban == false) ? Colors.white : Colors.black,
-                                      ),
-                                    ),
-                                    subtitle: Text("${p.tasks.where((t) => t.isDone).toList().length}/${p.tasks.length}"),
-                                    onTap: () {
-                                      projectBloc.getProjectById(p.uid);
-                                    },
-                                    onLongPress: () => onProjectListTileLongPressed(p),
-                                  ),
-                                ),
-                            Container(
-                              color: Colors.transparent,
-                              child: ListTile(
-                                  title: Icon(Icons.add),
-                                  onTap: () {
-                                    showDialog<bool>(
-                                      context: context,
-                                      builder: (context) {
-                                        return CupertinoAlertDialog(
-                                          title: Text('Name Your Project'),
-                                          content: Flex(
-                                            direction: Axis.vertical,
-                                            children: <Widget>[
-                                              SizedBox(height: 12),
-                                              CupertinoTextField(
-                                                controller: nameEditingController,
-                                              )
-                                            ],
-                                          ),
-                                          actions: <Widget>[
-                                            CupertinoActionSheetAction(
-                                                onPressed: () {
-                                                  Navigator.pop(context);
-                                                },
-                                                child: Text("Cancel")),
-                                            CupertinoActionSheetAction(
-                                                onPressed: () {
-                                                  var name = nameEditingController.text;
-                                                  if (name.isNotEmpty) {
-                                                    nameEditingController.clear();
-                                                    //scaffoldKey.currentState.closeDrawer();
-                                                    Navigator.pop(context);
-                                                    String uid = projectBloc.createProject(name);
-                                                    projectBloc.getProjectById(uid);
-                                                  }
-                                                },
-                                                child: Text("Confirm"),
-                                                isDefaultAction: true),
-                                          ],
-                                        );
-                                      },
-                                    );
-                                  }),
-                            )
-                          ],
-                        );
-                      },
-                    )),
-                  )),
-            )),
-        Positioned.fill(
-          child: AnimatedBuilder(
-            animation: drawerAnimationController,
-            builder: (_, child) {
-              var anim = drawerAnimationController;
-              var curveAnim = CurvedAnimation(parent: anim, curve: SpringCurve.underDamped);
-              return Transform.translate(offset: Offset(curveAnim.value * 300, 0), child: child);
-            },
-            child: Scaffold(
-                key: scaffoldKey,
-                bottomNavigationBar: BottomAppBar(
-                  color: Colors.purple,
-                  elevation: 8,
-                  child: Row(
-                    children: [
-                      IconButton(
-                          icon: AnimatedIcon(icon: AnimatedIcons.menu_arrow, progress: drawerAnimationController, color: Colors.white),
-                          onPressed: () {
-                            openDrawer();
-                          }),
-                      Spacer(),
-                      AnimatedBuilder(
-                        animation: iconAnimationController,
-                        builder: (_, __) {
-                          return Opacity(
-                              opacity: iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value,
-                              child: IconButton(
-                                icon: Icon(Icons.delete_sweep, color: Colors.white),
-                                onPressed: () => showRemoveAllDialog(),
-                              ));
-                        },
-                      ),
-                    ],
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+          appBar: AppBar(
+            actions: [
+              IconButton(
+                  icon: Icon(Icons.add),
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => TaskCreatePage()));
+                  })
+            ],
+            title: StreamBuilder(
+                stream: projectBloc.currentProject,
+                builder: (_, AsyncSnapshot<Project> snapshot) {
+                  if (snapshot.hasData) {
+                    return Text(snapshot.data.name);
+                  }
+                  return Text('');
+                }),
+            bottom: TabBar(
+              tabs: [
+                Tab(
+                  child: StreamBuilder(
+                    stream: projectBloc.allTodo,
+                    builder: (_, snapshot) {
+                      return Column(
+                        children: [Text('Todo'), Text(snapshot.hasData ? '${snapshot.data.length}' : '')],
+                      );
+                    },
                   ),
                 ),
-                floatingActionButton: FloatingActionButton(
-                    child: Icon(Icons.add),
-                    onPressed: () {
-                      if (iconAnimationController.drive(Tween<double>(begin: 1.0, end: 0.0)).value != 0)
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => TaskCreatePage()));
-                    }),
-                floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-                body: AnimatedBuilder(
-                  animation: animationController,
-                  builder: (_, __) {
-                    double todoHeight = this.todoHeight, doingHeight = this.doingHeight, doneHeight = this.doneHeight;
-
-                    if (currentTask != null) {
-                      if (interactingStatus == InteractingStatus.move) {
-                        switch (currentTask.status) {
-                          case TaskStatus.todo:
-                            todoHeight = todoHeight + (animationController.value + 1) * -unit;
-                            doingHeight = doingHeight + (animationController.value + 1) * unit;
-                            break;
-                          case TaskStatus.doing:
-                            doingHeight = doingHeight + (animationController.value + 1) * -unit;
-                            doneHeight = doneHeight + (animationController.value + 1) * unit;
-                            break;
-                          default:
-                            break;
-                        }
-                      } else if (interactingStatus == InteractingStatus.delete) {
-                        if (task.length == 1) {
-                        } else {
-                          double initialTodoHeight = (todoTask.length / task.length) * height;
-                          double initialDoingHeight = (doingTask.length / task.length) * height;
-                          double initialDoneHeight = (doneTask.length / task.length) * height;
-                          double deltaX, deltaY, deltaZ;
-
-                          switch (currentTask.status) {
-                            case TaskStatus.todo:
-                              deltaX = height * (todoTask.length - 1) / (task.length - 1) - initialTodoHeight;
-                              deltaY = height * (doingTask.length) / (task.length - 1) - initialDoingHeight;
-                              deltaZ = height * (doneTask.length) / (task.length - 1) - initialDoneHeight;
-                              break;
-                            case TaskStatus.doing:
-                              deltaX = height * (todoTask.length) / (task.length - 1) - initialTodoHeight;
-                              deltaY = height * (doingTask.length - 1) / (task.length - 1) - initialDoingHeight;
-                              deltaZ = height * (doneTask.length) / (task.length - 1) - initialDoneHeight;
-                              break;
-                            case TaskStatus.done:
-                              deltaX = height * (todoTask.length) / (task.length - 1) - initialTodoHeight;
-                              deltaY = height * (doingTask.length) / (task.length - 1) - initialDoingHeight;
-                              deltaZ = height * (doneTask.length - 1) / (task.length - 1) - initialDoneHeight;
-                              break;
-                            default:
-                              break;
-                          }
-
-                          todoHeight = initialTodoHeight + (animationController.value + 1) * deltaX;
-                          doingHeight = initialDoingHeight + (animationController.value + 1) * deltaY;
-                          doneHeight = initialDoneHeight + (animationController.value + 1) * deltaZ;
-                        }
-                      }
-                    }
-
-                    if (task.isEmpty) {
-                      return Stack(
-                        children: <Widget>[
-                          Positioned(
-                              top: 0,
-                              height: height,
-                              width: MediaQuery.of(context).size.width,
-                              child: Material(
-                                color: Colors.lightBlue,
-                                child: Ink(
-                                  child: InkWell(
-                                    onTap: () {
-                                      Navigator.push(context, MaterialPageRoute(builder: (_) => TaskCreatePage()));
-                                    },
-//                            child: Center(
-//                                child: Transform.scale(
-//                              scale: 5,
-//                              child: Icon(
-//                                Icons.add,
-//                                color: Colors.white,
-//                              ),
-//                            )),
-                                  ),
-                                ),
-                              ))
-                        ],
+                Tab(
+                  child: StreamBuilder(
+                    stream: projectBloc.allDoing,
+                    builder: (_, snapshot) {
+                      return Column(
+                        children: [Text('Doing'), Text(snapshot.hasData ? '${snapshot.data.length}' : '')],
                       );
-                    }
+                    },
+                  ),
+                ),
+                Tab(
+                  child: StreamBuilder(
+                    stream: projectBloc.allDone,
+                    builder: (_, snapshot) {
+                      return Column(
+                        children: [Text('Done'), Text(snapshot.hasData ? '${snapshot.data.length}' : '')],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          backgroundColor: Colors.white,
+          body: TabBarView(
+            children: [
+              Container(
+                color: Colors.lightBlue,
+                child: StreamBuilder(
+                  stream: projectBloc.allTodo,
+                  builder: (_, snapshot) {
+                    if (snapshot.hasData) {
+                      var todos = snapshot.data;
 
-                    Color backgroundColor;
-
-                    if (todoHeight != 0) {
-                      backgroundColor = Colors.lightBlue;
-                    } else if (doingHeight != 0) {
-                      backgroundColor = Colors.redAccent;
-                    } else {
-                      backgroundColor = Colors.blueAccent;
-                    }
-
-                    print("doingHeight: $doingHeight");
-                    if ((todoTask.length != 0 && todoHeight < 180) ||
-                        (doingTask.length != 0 && doingHeight < 180) ||
-                        (doneTask.length != 0 && doneHeight < 180)) {
-                      return Container(
-                        color: backgroundColor,
-                        child: SingleChildScrollView(
-                          child: Column(
-                            children: [
-                              if (todoTask.isNotEmpty)
-                                Container(
-                                  child: Column(
-                                    children: [
-                                      SizedBox(
-                                        height: 48,
-                                      ),
-                                      ...buildChildren(todoTask)
-                                    ],
-                                  ),
-                                  height: 48 + 72.0 * todoTask.length,
-                                  color: Colors.lightBlue,
-                                ),
-                              if (doingTask.isNotEmpty)
-                                Container(
-                                  child: Column(
-                                    children: [
-                                      SizedBox(
-                                        height: 48,
-                                      ),
-                                      ...buildChildren(doingTask)
-                                    ],
-                                  ),
-                                  height: 48 + 72.0 * doingTask.length,
-                                  color: Colors.redAccent,
-                                ),
-                              if (doneTask.isNotEmpty)
-                                AnimatedContainer(
-                                  duration: Duration(microseconds: 300),
-                                  child: Column(
-                                    children: [
-                                      SizedBox(
-                                        height: 48,
-                                      ),
-                                      ...buildChildren(doneTask)
-                                    ],
-                                  ),
-                                  height: 48 + 72.0 * doneTask.length,
-                                  color: Colors.blueAccent,
-                                ),
-                            ],
-                          ),
+                      return SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              height: 12,
+                            ),
+                            ...buildChildren(todos)
+                          ],
                         ),
                       );
                     }
 
-                    return Stack(
-                      children: [
-                        Positioned.fill(
-                            child: Container(
-                          color: backgroundColor,
-                        )),
-                        SafeArea(
-                            child: Stack(
-                          children: <Widget>[
-                            Positioned(
-                              top: doingHeight + todoHeight,
-                              height: doneHeight,
-                              width: MediaQuery.of(context).size.width,
-                              child: Container(
-                                  color: Colors.blueAccent,
-                                  child: SingleChildScrollView(
-                                    key: UniqueKey(),
-                                    child: Flex(
-                                      key: UniqueKey(),
-                                      direction: Axis.vertical,
-                                      children: [
-                                        ...buildChildren(doneTask),
-                                        Transform.translate(
-                                            offset: Offset(animationController.value * MediaQuery.of(context).size.width, 0),
-                                            child: currentTask == null ||
-                                                    currentTask.status != TaskStatus.doing ||
-                                                    interactingStatus == InteractingStatus.delete
-                                                ? Container()
-                                                : Padding(
-                                                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                                                    child: Container(
-                                                      color: Colors.white,
-                                                      child: ListTile(
-                                                        title: Text(currentTask.title),
-                                                      ),
-                                                    ),
-                                                  ))
-                                      ],
-                                    ),
-                                  )),
-                            ),
-                            //Doing section.
-                            Positioned(
-                                top: todoHeight,
-                                height: doingHeight,
-                                //height: doingHeight + animationController.value * -48,
-                                width: MediaQuery.of(context).size.width,
-                                child: Material(
-                                    elevation: 8,
-                                    child: Container(
-                                        //height: animationController.value * -20,
-                                        color: Colors.redAccent,
-                                        child: SingleChildScrollView(
-                                          child: Flex(
-                                            key: UniqueKey(),
-                                            direction: Axis.vertical,
-                                            children: [
-                                              ...buildChildren(doingTask),
-                                              Transform.translate(
-                                                  offset: Offset(animationController.value * MediaQuery.of(context).size.width, 0),
-                                                  child: currentTask == null ||
-                                                          currentTask.status != TaskStatus.todo ||
-                                                          interactingStatus == InteractingStatus.delete
-                                                      ? Container()
-                                                      : Padding(
-                                                          padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                                                          child: Container(
-                                                            color: Colors.white,
-                                                            child: ListTile(
-                                                              title: Text(currentTask.title),
-                                                            ),
-                                                          ),
-                                                        ))
-                                            ],
-                                          ),
-                                        )))),
-                            //Todo section
-                            Positioned(
-                              top: 0,
-                              height: todoHeight,
-                              width: MediaQuery.of(context).size.width,
-                              child: Material(
-                                elevation: 8,
-                                color: Colors.lightBlue,
-                                child: Container(
-                                    color: Colors.lightBlue,
-                                    child: SingleChildScrollView(
-                                      child: Flex(
-                                        key: UniqueKey(),
-                                        direction: Axis.vertical,
-                                        children: <Widget>[...buildChildren(todoTask)],
-                                      ),
-                                    )),
-                              ),
-                            )
-                          ],
-                        ))
-                      ],
-                    );
+                    return Container();
                   },
-                )),
-          ),
-        )
-      ],
-    );
-  }
+                ),
+              ),
+              Container(
+                color: Colors.redAccent,
+                child: StreamBuilder(
+                  stream: projectBloc.allDoing,
+                  builder: (_, snapshot) {
+                    if (snapshot.hasData) {
+                      var doings = snapshot.data;
 
-  void openDrawer() {
-    if (drawerAnimationController.value == 1) {
-      drawerAnimationController.reverse();
-    } else {
-      drawerAnimationController.forward();
-    }
+                      return SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              height: 12,
+                            ),
+                            ...buildChildren(doings)
+                          ],
+                        ),
+                      );
+                    }
+
+                    return Container();
+                  },
+                ),
+              ),
+              Container(
+                color: Colors.blueAccent,
+                child: StreamBuilder(
+                  stream: projectBloc.allDone,
+                  builder: (_, snapshot) {
+                    if (snapshot.hasData) {
+                      var dones = snapshot.data;
+
+                      return SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              height: 12,
+                            ),
+                            ...buildChildren(dones)
+                          ],
+                        ),
+                      );
+                    }
+
+                    return Container();
+                  },
+                ),
+              ),
+            ],
+          ),
+          drawer: Drawer(
+              child: Material(
+            color: Colors.white,
+            child: SingleChildScrollView(
+                child: StreamBuilder(
+              stream: projectBloc.allProjects,
+              builder: (_, AsyncSnapshot<List<Project>> snapshot) {
+                return Flex(
+                  direction: Axis.vertical,
+                  children: <Widget>[
+                    SizedBox(height: 48),
+                    Container(
+                      child: ListTile(
+                        title: Text(
+                          "My Kanban",
+                          style: TextStyle(color: Colors.black),
+                        ),
+                        onTap: () {
+                          projectBloc.getKanban();
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ),
+                    Container(
+                        child: Flex(
+                      direction: Axis.horizontal,
+                      children: <Widget>[
+                        Flexible(
+                          child: Divider(),
+                          flex: 1,
+                        ),
+                        Flexible(
+                          child: ListTile(
+                              title: Text(
+                            "Projects",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.black),
+                          )),
+                          flex: 1,
+                        ),
+                        Flexible(
+                          child: Divider(),
+                          flex: 1,
+                        )
+                      ],
+                    )),
+                    if (snapshot.hasData)
+                      for (var p in snapshot.data)
+                        Container(
+                          //color: (widget.project.id == p.id && widget.isKanban == false) ? appBarColor : Colors.transparent,
+                          child: ListTile(
+                            leading: Icon(
+                              FontAwesomeIconsMap[p.icon],
+                              color: Colors.black54,
+                            ),
+                            title: Text(
+                              p.name,
+                              style: TextStyle(
+                                color: Colors.black,
+                              ),
+                            ),
+                            subtitle: Text("${p.tasks.where((t) => t.isDone).toList().length}/${p.tasks.length}"),
+                            onTap: () {
+                              projectBloc.getProjectById(p.uid);
+                              Navigator.pop(context);
+                            },
+                            onLongPress: () => onProjectListTileLongPressed(p),
+                          ),
+                        ),
+                    Container(
+                      color: Colors.transparent,
+                      child: ListTile(
+                          title: Icon(Icons.add),
+                          onTap: () {
+                            showDialog<bool>(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: Text('Name Your Project'),
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      TextField(
+                                        controller: nameEditingController,
+                                      )
+                                    ],
+                                  ),
+                                  actions: <Widget>[
+                                    FlatButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                        child: Text("Cancel")),
+                                    FlatButton(
+                                        onPressed: () {
+                                          var name = nameEditingController.text;
+                                          if (name.isNotEmpty) {
+                                            nameEditingController.clear();
+
+                                            String uid = projectBloc.createProject(name);
+                                            projectBloc.getProjectById(uid);
+                                            Navigator.pop(context);
+                                            Navigator.pop(context);
+
+                                            AppReview.isRequestReviewAvailable.then((isAvailable) {
+                                              if (isAvailable) {
+                                                AppReview.requestReview;
+                                              }
+                                            });
+                                          }
+                                        },
+                                        child: Text("Confirm")),
+                                  ],
+                                );
+                              },
+                            );
+                          }),
+                    )
+                  ],
+                );
+              },
+            )),
+          ))),
+    );
   }
 
   List<Widget> buildChildren(List<Task> tasks) {
     print(tasks);
     return tasks.map((e) {
-      return Custom.CustomDismissible(
-        direction: Custom.DismissDirection.horizontal,
-        secondaryBackground: Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Container(
-            alignment: Alignment.centerRight,
-            padding: EdgeInsets.only(right: 20.0),
-            color: Colors.red,
-            child: Icon(
-              Icons.delete,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        key: dismissibleKeys[e],
+      return Dismissible(
+        key: UniqueKey(),
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
           child: Material(
@@ -800,79 +388,166 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ),
         ),
-        confirmDismiss: (direction) async {
-          if (direction == Custom.DismissDirection.endToStart) {
-            setState(() {
-              currentTask = null;
-              dismissibleKeys.remove(e);
-
-              switch (e.status) {
-                case TaskStatus.todo:
-                  todoTask.remove(e);
-                  break;
-                case TaskStatus.doing:
-                  doingTask.remove(e);
-                  break;
-                case TaskStatus.done:
-                  doneTask.remove(e);
-                  break;
-                default:
-                  break;
-              }
-              computeHeight();
-              projectBloc.removeTask(e);
-            });
-            return true;
+        direction: DismissDirection.horizontal,
+        background: Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Container(
+            alignment: Alignment.centerLeft,
+            padding: EdgeInsets.only(left: 20.0),
+            color: Colors.transparent,
+            child: Icon(
+              Icons.forward,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        secondaryBackground: Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Container(
+            alignment: Alignment.centerRight,
+            padding: EdgeInsets.only(right: 20.0),
+            color: Colors.red,
+            child: Icon(
+              Icons.delete,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        onDismissed: (direction) {
+          if (direction == DismissDirection.endToStart) {
+            projectBloc.removeTask(e);
           } else {
-            switch (e.status) {
-              case TaskStatus.todo:
-                setState(() {
-                  currentTask = null;
-
-                  e.status = TaskStatus.doing;
-
-                  projectBloc.updateCurrent();
-
-                  task.remove(e);
-                  task.add(e);
-
-                  todoTask.remove(e);
-                  doingTask.add(e);
-
-                  todoHeight -= unit;
-                  doingHeight += unit;
-                });
-                break;
-              case TaskStatus.doing:
-                setState(() {
-                  currentTask = null;
-
-                  e.status = TaskStatus.done;
-
-                  projectBloc.updateCurrent();
-
-                  task.remove(e);
-                  task.add(e);
-
-                  doingTask.remove(e);
-                  doneTask.add(e);
-
-                  doingHeight -= unit;
-                  doneHeight += unit;
-                });
-                break;
-              case TaskStatus.done:
-                showSnackBar("This is already done!");
-                break;
-              default:
-                break;
-            }
+            projectBloc.updateTaskStatus(e);
           }
-          return false;
         },
-        onDismissed: (direction) {},
-        onResize: () {},
       );
+      // return Custom.CustomDismissible(
+      //   direction: Custom.DismissDirection.horizontal,
+      //
+      //   key: dismissibleKeys[e],
+      //   child: Padding(
+      //     padding: EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+      //     child: Material(
+      //       elevation: 4,
+      //       color: Colors.white,
+      //       child: ListTile(
+      //         title: Text(e.title),
+      //         onTap: () {
+      //           showModalBottomSheet(
+      //               isScrollControlled: true,
+      //               context: context,
+      //               builder: (_) {
+      //                 if (e.description == null || e.description.isEmpty) {
+      //                   return Container(
+      //                       height: 200,
+      //                       decoration: BoxDecoration(
+      //                         borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+      //                         color: Colors.white,
+      //                       ),
+      //                       child: Padding(
+      //                         padding: EdgeInsets.all(12),
+      //                         child: Column(
+      //                           mainAxisSize: MainAxisSize.min,
+      //                           children: <Widget>[
+      //                             Text(
+      //                               e.title,
+      //                               style: TextStyle(fontSize: 20, color: Colors.black),
+      //                             ),
+      //                             Spacer(),
+      //                             Text(e.dueDate == null ? "" : "Due by ${e.dueDate.toLocal().toCustomString()}",
+      //                                 style: TextStyle(color: Colors.black54)),
+      //                             Divider(),
+      //                             Text(e.createdDate == null ? "" : "Created on ${e.createdDate.toLocal().toCustomString()}",
+      //                                 style: TextStyle(color: Colors.black54)),
+      //                             SizedBox(height: 12)
+      //                           ],
+      //                         ),
+      //                       ));
+      //                 }
+      //
+      //                 return Container(
+      //                   decoration: BoxDecoration(
+      //                     borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+      //                     color: Colors.white,
+      //                   ),
+      //                   child: DraggableScrollableSheet(
+      //                     expand: false,
+      //                     maxChildSize: 0.9,
+      //                     builder: (_, scrollController) {
+      //                       return SingleChildScrollView(
+      //                           //physics: NeverScrollableScrollPhysics(),
+      //                           controller: scrollController,
+      //                           child: Padding(
+      //                             padding: EdgeInsets.all(12),
+      //                             child: Column(
+      //                               mainAxisSize: MainAxisSize.min,
+      //                               children: <Widget>[
+      //                                 Text(
+      //                                   e.title,
+      //                                   style: TextStyle(fontSize: 20, color: Colors.black),
+      //                                 ),
+      //                                 Divider(),
+      //                                 Flexible(
+      //                                   child: Container(
+      //                                     width: MediaQuery.of(context).size.width,
+      //                                     child: Text(
+      //                                       e.description ?? "",
+      //                                       style: TextStyle(fontSize: 16, color: Colors.black),
+      //                                     ),
+      //                                   ),
+      //                                 ),
+      //                                 SizedBox(
+      //                                   height: 12,
+      //                                 ),
+      //                                 if (e.dueDate != null) Divider(),
+      //                                 Text(e.dueDate == null ? "" : "Due by ${e.dueDate.toLocal().toCustomString()}",
+      //                                     style: TextStyle(color: Colors.black54)),
+      //                                 Divider(),
+      //                                 Text(e.createdDate == null ? "" : "Created on ${e.createdDate.toLocal().toCustomString()}",
+      //                                     style: TextStyle(color: Colors.black54))
+      //                               ],
+      //                             ),
+      //                           ));
+      //                     },
+      //                   ),
+      //                 );
+      //               });
+      //         },
+      //       ),
+      //     ),
+      //   ),
+      //   confirmDismiss: (direction) async {
+      //     if (direction == Custom.DismissDirection.endToStart) {
+      //       projectBloc.removeTask(e);
+      //       // setState(() {
+      //       //   currentTask = null;
+      //       //   dismissibleKeys.remove(e);
+      //       //
+      //       //   switch (e.status) {
+      //       //     case TaskStatus.todo:
+      //       //       todoTask.remove(e);
+      //       //       break;
+      //       //     case TaskStatus.doing:
+      //       //       doingTask.remove(e);
+      //       //       break;
+      //       //     case TaskStatus.done:
+      //       //       doneTask.remove(e);
+      //       //       break;
+      //       //     default:
+      //       //       break;
+      //       //   }
+      //       //   computeHeight();
+      //       //   projectBloc.removeTask(e);
+      //       // });
+      //       return true;
+      //     } else {
+      //       projectBloc.updateTaskStatus(e);
+      //     }
+      //     return false;
+      //   },
+      //   onDismissed: (direction) {},
+      //   onResize: () {},
+      // );
     }).toList();
   }
 
@@ -896,24 +571,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     context: context,
                     builder: (context) {
                       nameEditingController.text = p.name;
-                      return CupertinoAlertDialog(
-                        content: Flex(
-                          direction: Axis.vertical,
+                      return AlertDialog(
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
                             SizedBox(height: 12),
-                            CupertinoTextField(
-                              style: Theme.of(context).textTheme.bodyText2,
+                            TextField(
                               controller: nameEditingController,
                             )
                           ],
                         ),
                         actions: <Widget>[
-                          CupertinoActionSheetAction(
+                          FlatButton(
                               onPressed: () {
                                 Navigator.pop(context);
                               },
                               child: Text("Cancel")),
-                          CupertinoActionSheetAction(
+                          FlatButton(
                               onPressed: () {
                                 var name = nameEditingController.text;
                                 if (name.isNotEmpty) {
@@ -925,8 +599,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   projectBloc.updateProject(p);
                                 }
                               },
-                              child: Text("Confirm"),
-                              isDefaultAction: true),
+                              child: Text("Confirm")),
                         ],
                       );
                     },

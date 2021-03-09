@@ -80,25 +80,24 @@ class _IconPageState extends State<IconPage> {
     showDialog<bool>(
       context: context,
       builder: (context) {
-        return CupertinoAlertDialog(
+        return AlertDialog(
           title: Text('Use this icon for \n${widget.project.name}?'),
-          content: Flex(
-            direction: Axis.vertical,
-            children: <Widget>[SizedBox(height: 24), Transform.scale(scale: 2, child: Icon(FontAwesomeIconsMap[iconString])), SizedBox(height: 24)],
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[Transform.scale(scale: 2, child: Icon(FontAwesomeIconsMap[iconString])), SizedBox(height: 24)],
           ),
           actions: <Widget>[
-            CupertinoActionSheetAction(
+            FlatButton(
                 onPressed: () {
                   Navigator.pop(context);
                 },
                 child: Text("Cancel")),
-            CupertinoActionSheetAction(
+            FlatButton(
                 onPressed: () {
                   projectBloc.updateIcon(widget.project, iconString);
                   Navigator.pop(context);
                 },
-                child: Text("Confirm"),
-                isDefaultAction: true),
+                child: Text("Confirm")),
           ],
         );
       },

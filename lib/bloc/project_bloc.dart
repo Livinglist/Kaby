@@ -9,6 +9,9 @@ class ProjectBloc {
   final _currentProjectFetcher = BehaviorSubject<Project>();
   final _kanbanFetcher = BehaviorSubject<Project>();
   final _isKanbanFetcher = BehaviorSubject<bool>();
+  final _todoFetcher = BehaviorSubject<List<Task>>();
+  final _doingFetcher = BehaviorSubject<List<Task>>();
+  final _doneFetcher = BehaviorSubject<List<Task>>();
 
   bool _isKanban = false;
 
@@ -16,6 +19,10 @@ class ProjectBloc {
   Stream<Project> get currentProject => _currentProjectFetcher.stream;
   Stream<Project> get kanban => _kanbanFetcher.stream;
   Stream<bool> get isKanban => _isKanbanFetcher.stream;
+
+  Stream<List<Task>> get allTodo => _todoFetcher.stream;
+  Stream<List<Task>> get allDoing => _doingFetcher.stream;
+  Stream<List<Task>> get allDone => _doneFetcher.stream;
 
   List<Project> _allProjects = [];
   Project _currentProject;
@@ -36,6 +43,9 @@ class ProjectBloc {
     _isKanbanFetcher.sink.add(_isKanban);
     _projectsFetcher.sink.add(_allProjects);
     _currentProjectFetcher.sink.add(_currentProject);
+    _todoFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.todo).toList());
+    _doingFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.doing).toList());
+    _doneFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.done).toList());
   }
 
   void addProject(Project project) {
@@ -48,6 +58,9 @@ class ProjectBloc {
     _currentProjectFetcher.sink.add(_currentProject);
     _isKanban = true;
     _isKanbanFetcher.sink.add(_isKanban);
+    _todoFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.todo).toList());
+    _doingFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.doing).toList());
+    _doneFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.done).toList());
   }
 
   void getProjectById(String uid) {
@@ -60,6 +73,9 @@ class ProjectBloc {
       _isKanbanFetcher.sink.add(_isKanban);
     }
     _currentProjectFetcher.sink.add(_currentProject);
+    _todoFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.todo).toList());
+    _doingFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.doing).toList());
+    _doneFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.done).toList());
   }
 
   String createProject(String name) {
@@ -87,7 +103,6 @@ class ProjectBloc {
     repo.updateProject(project);
     _currentProjectFetcher.sink.add(_currentProject);
     _projectsFetcher.sink.add(_allProjects);
-    //}
   }
 
   void updateProject(Project project) {
@@ -106,6 +121,7 @@ class ProjectBloc {
   void addTask(Task task) {
     _currentProject.tasks.add(task);
     _currentProjectFetcher.sink.add(_currentProject);
+    _todoFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.todo).toList());
 
     if (_isKanban) {
       repo.setMyKanban(_currentProject);
@@ -117,6 +133,9 @@ class ProjectBloc {
   void removeTask(Task task) {
     _currentProject.tasks.remove(task);
     _currentProjectFetcher.sink.add(_currentProject);
+    _todoFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.todo).toList());
+    _doingFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.doing).toList());
+    _doneFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.done).toList());
 
     if (_isKanban) {
       repo.setMyKanban(_currentProject);
@@ -128,6 +147,9 @@ class ProjectBloc {
   void removeAllTasks() {
     _currentProject.tasks.clear();
     _currentProjectFetcher.sink.add(_currentProject);
+    _todoFetcher.drain();
+    _doingFetcher.drain();
+    _doneFetcher.drain();
 
     if (_isKanban) {
       repo.setMyKanban(_currentProject);
@@ -136,16 +158,48 @@ class ProjectBloc {
     }
   }
 
-  void updateCurrent() {
-    _currentProjectFetcher.sink.add(_currentProject);
+  void updateTaskStatus(Task task){
+    print("id is ${task.id}");
+    print(_currentProject.tasks.where((t) => t.uid == task.uid));
+    var t = _currentProject.tasks.singleWhere((t) => t.uid == task.uid, orElse: ()=>null);
+    switch(task.status){
+      case TaskStatus.todo:
+        t.status = TaskStatus.doing;
+        break;
+      case TaskStatus.doing:
+        t.status = TaskStatus.done;
+        break;
+      case TaskStatus.done:
+        break;
+      default:
+        break;
+    }
+
+    _currentProject.tasks.remove(task);
+    _currentProject.tasks.add(t);
 
     if (_isKanban) {
       repo.setMyKanban(_currentProject);
     } else {
       repo.updateProject(_currentProject);
     }
+    _currentProjectFetcher.sink.add(_currentProject);
+    _todoFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.todo).toList());
+    _doingFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.doing).toList());
+    _doneFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.done).toList());
+  }
 
-    //_projectsFetcher.sink.add(_allProjects);
+  void updateCurrent() {
+    _currentProjectFetcher.sink.add(_currentProject);
+    _todoFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.todo).toList());
+    _doingFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.doing).toList());
+    _doneFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.done).toList());
+
+    if (_isKanban) {
+      repo.setMyKanban(_currentProject);
+    } else {
+      repo.updateProject(_currentProject);
+    }
   }
 
   void dispose() {

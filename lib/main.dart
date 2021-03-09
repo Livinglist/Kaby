@@ -19,8 +19,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Kanban',
       theme: ThemeData(primarySwatch: Colors.blue, canvasColor: Colors.transparent),
-      routes: {"/home_page": (_) => HomePageWrapper()},
-      home: HomePageWrapper(),
+      routes: {"/home_page": (_) => HomePage()},
+      home: HomePage(),
     );
   }
 }
