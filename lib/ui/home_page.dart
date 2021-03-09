@@ -351,7 +351,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                             children: <Widget>[
                                               SizedBox(height: 12),
                                               CupertinoTextField(
-                                                style: Theme.of(context).textTheme.bodyText2,
                                                 controller: nameEditingController,
                                               )
                                             ],
@@ -512,17 +511,88 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       );
                     }
 
+                    Color backgroundColor;
+
+                    if (todoHeight != 0) {
+                      backgroundColor = Colors.lightBlue;
+                    } else if (doingHeight != 0) {
+                      backgroundColor = Colors.redAccent;
+                    } else {
+                      backgroundColor = Colors.blueAccent;
+                    }
+
+                    print("doingHeight: $doingHeight");
+                    if ((todoTask.length != 0 && todoHeight < 180) ||
+                        (doingTask.length != 0 && doingHeight < 180) ||
+                        (doneTask.length != 0 && doneHeight < 180)) {
+                      return Container(
+                        color: backgroundColor,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              if (todoTask.isNotEmpty)
+                                Container(
+                                  child: Column(
+                                    children: [
+                                      SizedBox(
+                                        height: 48,
+                                      ),
+                                      ...buildChildren(todoTask)
+                                    ],
+                                  ),
+                                  height: 48 + 72.0 * todoTask.length,
+                                  color: Colors.lightBlue,
+                                ),
+                              if (doingTask.isNotEmpty)
+                                Container(
+                                  child: Column(
+                                    children: [
+                                      SizedBox(
+                                        height: 48,
+                                      ),
+                                      ...buildChildren(doingTask)
+                                    ],
+                                  ),
+                                  height: 48 + 72.0 * doingTask.length,
+                                  color: Colors.redAccent,
+                                ),
+                              if (doneTask.isNotEmpty)
+                                AnimatedContainer(
+                                  duration: Duration(microseconds: 300),
+                                  child: Column(
+                                    children: [
+                                      SizedBox(
+                                        height: 48,
+                                      ),
+                                      ...buildChildren(doneTask)
+                                    ],
+                                  ),
+                                  height: 48 + 72.0 * doneTask.length,
+                                  color: Colors.blueAccent,
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
                     return Stack(
-                      children: <Widget>[
-                        Positioned(
-                          top: doingHeight + todoHeight,
-                          height: doneHeight,
-                          width: MediaQuery.of(context).size.width,
-                          child: Container(
-                              color: Colors.blueAccent,
-                              child: SingleChildScrollView(
-                                  key: UniqueKey(),
-                                  child: SafeArea(
+                      children: [
+                        Positioned.fill(
+                            child: Container(
+                          color: backgroundColor,
+                        )),
+                        SafeArea(
+                            child: Stack(
+                          children: <Widget>[
+                            Positioned(
+                              top: doingHeight + todoHeight,
+                              height: doneHeight,
+                              width: MediaQuery.of(context).size.width,
+                              child: Container(
+                                  color: Colors.blueAccent,
+                                  child: SingleChildScrollView(
+                                    key: UniqueKey(),
                                     child: Flex(
                                       key: UniqueKey(),
                                       direction: Axis.vertical,
@@ -545,64 +615,64 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                                   ))
                                       ],
                                     ),
-                                  ))),
-                        ),
-                        //Doing section.
-                        Positioned(
-                            top: todoHeight,
-                            height: doingHeight,
-                            //height: doingHeight + animationController.value * -48,
-                            width: MediaQuery.of(context).size.width,
-                            child: Material(
+                                  )),
+                            ),
+                            //Doing section.
+                            Positioned(
+                                top: todoHeight,
+                                height: doingHeight,
+                                //height: doingHeight + animationController.value * -48,
+                                width: MediaQuery.of(context).size.width,
+                                child: Material(
+                                    elevation: 8,
+                                    child: Container(
+                                        //height: animationController.value * -20,
+                                        color: Colors.redAccent,
+                                        child: SingleChildScrollView(
+                                          child: Flex(
+                                            key: UniqueKey(),
+                                            direction: Axis.vertical,
+                                            children: [
+                                              ...buildChildren(doingTask),
+                                              Transform.translate(
+                                                  offset: Offset(animationController.value * MediaQuery.of(context).size.width, 0),
+                                                  child: currentTask == null ||
+                                                          currentTask.status != TaskStatus.todo ||
+                                                          interactingStatus == InteractingStatus.delete
+                                                      ? Container()
+                                                      : Padding(
+                                                          padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                                          child: Container(
+                                                            color: Colors.white,
+                                                            child: ListTile(
+                                                              title: Text(currentTask.title),
+                                                            ),
+                                                          ),
+                                                        ))
+                                            ],
+                                          ),
+                                        )))),
+                            //Todo section
+                            Positioned(
+                              top: 0,
+                              height: todoHeight,
+                              width: MediaQuery.of(context).size.width,
+                              child: Material(
                                 elevation: 8,
+                                color: Colors.lightBlue,
                                 child: Container(
-                                    //height: animationController.value * -20,
-                                    color: Colors.redAccent,
+                                    color: Colors.lightBlue,
                                     child: SingleChildScrollView(
-                                        child: SafeArea(
                                       child: Flex(
                                         key: UniqueKey(),
                                         direction: Axis.vertical,
-                                        children: [
-                                          ...buildChildren(doingTask),
-                                          Transform.translate(
-                                              offset: Offset(animationController.value * MediaQuery.of(context).size.width, 0),
-                                              child: currentTask == null ||
-                                                      currentTask.status != TaskStatus.todo ||
-                                                      interactingStatus == InteractingStatus.delete
-                                                  ? Container()
-                                                  : Padding(
-                                                      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                                                      child: Container(
-                                                        color: Colors.white,
-                                                        child: ListTile(
-                                                          title: Text(currentTask.title),
-                                                        ),
-                                                      ),
-                                                    ))
-                                        ],
+                                        children: <Widget>[...buildChildren(todoTask)],
                                       ),
-                                    ))))),
-                        //Todo section
-                        Positioned(
-                          top: 0,
-                          height: todoHeight,
-                          width: MediaQuery.of(context).size.width,
-                          child: Material(
-                            elevation: 8,
-                            color: Colors.lightBlue,
-                            child: Container(
-                                color: Colors.lightBlue,
-                                child: SingleChildScrollView(
-                                    child: SafeArea(
-                                  child: Flex(
-                                    key: UniqueKey(),
-                                    direction: Axis.vertical,
-                                    children: <Widget>[...buildChildren(todoTask)],
-                                  ),
-                                ))),
-                          ),
-                        )
+                                    )),
+                              ),
+                            )
+                          ],
+                        ))
                       ],
                     );
                   },
