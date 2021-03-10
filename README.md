@@ -15,7 +15,6 @@
 <img width="360" alt="Screen Shot 2020-08-20 at 5 50 28 PM" src="https://user-images.githubusercontent.com/7277662/110514374-16d1fe80-80bc-11eb-98e5-2be688ac19f8.png">
 <p/>
 
-A workout plan application.
 
 ## Getting Started
 
