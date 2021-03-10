@@ -87,12 +87,12 @@ class _IconPageState extends State<IconPage> {
             children: <Widget>[Transform.scale(scale: 2, child: Icon(FontAwesomeIconsMap[iconString])), SizedBox(height: 24)],
           ),
           actions: <Widget>[
-            FlatButton(
+            TextButton(
                 onPressed: () {
                   Navigator.pop(context);
                 },
                 child: Text("Cancel")),
-            FlatButton(
+            TextButton(
                 onPressed: () {
                   projectBloc.updateIcon(widget.project, iconString);
                   Navigator.pop(context);

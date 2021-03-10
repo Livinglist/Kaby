@@ -254,12 +254,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                     ],
                                   ),
                                   actions: <Widget>[
-                                    FlatButton(
+                                    TextButton(
                                         onPressed: () {
                                           Navigator.pop(context);
                                         },
                                         child: Text("Cancel")),
-                                    FlatButton(
+                                    TextButton(
                                         onPressed: () {
                                           var name = nameEditingController.text;
                                           if (name.isNotEmpty) {
@@ -582,12 +582,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ],
                         ),
                         actions: <Widget>[
-                          FlatButton(
+                          TextButton(
                               onPressed: () {
                                 Navigator.pop(context);
                               },
                               child: Text("Cancel")),
-                          FlatButton(
+                          TextButton(
                               onPressed: () {
                                 var name = nameEditingController.text;
                                 if (name.isNotEmpty) {
@@ -654,12 +654,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void showSnackBar(String msg) {
     assert(msg != null);
-    scaffoldKey.currentState.showSnackBar(SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(msg),
         action: SnackBarAction(
             label: "Dismiss",
             onPressed: () {
-              scaffoldKey.currentState.hideCurrentSnackBar();
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
             })));
   }
 

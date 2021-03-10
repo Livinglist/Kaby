@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 
 import 'package:kanban/bloc/project_bloc.dart';
 import 'package:kanban/models/task.dart';
@@ -63,7 +64,7 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                     child: TextFormField(
                       style: TextStyle(fontSize: 16),
                       maxLength: 50,
-                      maxLengthEnforced: false,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       controller: titleController,
                       decoration: InputDecoration(
                         hintText: "Title",
@@ -87,7 +88,7 @@ class _TaskCreatePageState extends State<TaskCreatePage> {
                 padding: EdgeInsets.all(12),
                 child: TextFormField(
                   maxLength: 300,
-                  maxLengthEnforced: false,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
                   maxLines: 6,
                   controller: descriptionController,
                   decoration: InputDecoration(
