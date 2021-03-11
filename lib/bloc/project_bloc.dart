@@ -89,12 +89,20 @@ class ProjectBloc {
     _allProjects.remove(project);
     _projectsFetcher.sink.add(_allProjects);
     if (_currentProject == project) {
-      if (_allProjects.isNotEmpty)
+      if (_allProjects.isNotEmpty) {
         _currentProject = _allProjects.last;
-      else
+        _currentProjectFetcher.sink.add(_currentProject);
+      }
+      else {
         _currentProject = _kanban;
+        _currentProjectFetcher.sink.add(_currentProject);
+        _isKanbanFetcher.sink.add(true);
+      }
+
+      _todoFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.todo).toList());
+      _doingFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.doing).toList());
+      _doneFetcher.add(_currentProject.tasks.where((t) => t.status == TaskStatus.done).toList());
     }
-    _currentProjectFetcher.sink.add(_currentProject);
     repo.deleteProject(project);
   }
 
